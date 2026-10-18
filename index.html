@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="公主庄园">
+<title>公主的声音庄园</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFF4F8; --paper2:#FFE6F0; --ink:#8A2E5C; --muted:#B5739A; --pink:#FF7EB3; --pinkDeep:#D9558C;
+  --lav:#B79CFF; --lavDeep:#8E72E0; --gold:#FFD66B; --line:#FFC6DE; --cover:#E86A9E;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --paper:#3B1F35; --paper2:#4A2643; --ink:#FFE3EF; --muted:#E2A6C4; --line:#6B3A5E; --cover:#9E3D6B; color-scheme:dark; }
+}
+:root[data-theme="dark"]{ --paper:#3B1F35; --paper2:#4A2643; --ink:#FFE3EF; --muted:#E2A6C4; --line:#6B3A5E; --cover:#9E3D6B; color-scheme:dark; }
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0; overflow:hidden;}
+body{background:#BDE8F2; font-family:"ZCOOL KuaiLe","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; color:var(--ink); -webkit-user-select:none; user-select:none; touch-action:none;}
+button{font:inherit; color:inherit; cursor:pointer;}
+button:focus-visible,input:focus-visible{outline:3px solid var(--pink); outline-offset:2px;}
+#game{position:fixed; inset:0; width:100%; height:100%; display:block;}
+.hidden{display:none !important;}
+
+/* HUD */
+.coins{position:fixed; left:50%; bottom:calc(14px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); display:flex; align-items:center; gap:8px; background:rgba(138,46,92,.88); color:#fff; border:3px solid #fff; border-radius:999px; padding:4px 18px 4px 6px; font-size:26px; pointer-events:none;}
+.coins svg{width:32px; height:32px;}
+.rate{position:fixed; right:calc(12px + env(safe-area-inset-right,0px)); top:calc(12px + env(safe-area-inset-top,0px)); background:rgba(255,255,255,.88); color:#8A2E5C; border:3px solid #fff; border-radius:16px; padding:3px 12px; font-size:15px; pointer-events:none; box-shadow:0 3px 0 #FFB3D1;}
+.tools{position:fixed; right:calc(10px + env(safe-area-inset-right,0px)); bottom:calc(10px + env(safe-area-inset-bottom,0px)); display:flex; gap:8px;}
+.tools.left{right:auto; left:calc(10px + env(safe-area-inset-left,0px));}
+.tool{width:58px; height:58px; border-radius:18px; border:3px solid #fff; background:#FFF4F8; box-shadow:0 4px 0 #FFB3D1; font-size:28px; display:flex; align-items:center; justify-content:center; position:relative; padding:0;}
+.tool.book{background:#FF7EB3; box-shadow:0 4px 0 #D9558C;}
+.tool .dot{position:absolute; top:-4px; right:-4px; width:16px; height:16px; border-radius:50%; background:#FFD66B; border:2px solid #fff;}
+.toast{position:fixed; left:50%; top:calc(14px + env(safe-area-inset-top,0px)); transform:translateX(-50%); background:rgba(255,255,255,.92); color:#8A2E5C; border:3px solid #fff; border-radius:18px; padding:5px 18px; font-size:20px; box-shadow:0 4px 0 #FFB3D1; transition:opacity .5s; pointer-events:none; white-space:nowrap;}
+.unlock{position:fixed; left:50%; bottom:calc(76px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); border:none; border-radius:999px; padding:10px 22px; font-size:19px; color:#fff; background:var(--lav); box-shadow:0 5px 0 var(--lavDeep); white-space:nowrap;}
+.unlock:disabled{background:#CDBEE8; box-shadow:0 5px 0 #A898C9;}
+
+/* overlays */
+.scrim{position:fixed; inset:0; background:rgba(120,40,90,.3); display:flex; align-items:center; justify-content:center; padding:max(10px,env(safe-area-inset-top,0px)) 10px max(10px,env(safe-area-inset-bottom,0px)); z-index:20;}
+.panel{position:relative; background:var(--paper); border:4px solid #fff; border-radius:26px; box-shadow:0 7px 0 #FFB3D1; padding:18px; width:min(440px,100%); max-height:100%; overflow-y:auto; text-align:center;}
+.panel h2{margin:0 0 6px; font-weight:400; font-size:26px; color:var(--pink);}
+.panel p{margin:6px 0; color:var(--muted); font-size:15px; line-height:1.5;}
+.x{position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:12px; border:3px solid #fff; background:#FF6F9F; color:#fff; font-size:20px; box-shadow:0 3px 0 #D9558C; z-index:2;}
+.btn{display:block; width:100%; border:none; border-radius:999px; padding:12px 10px; margin-top:10px; font-size:20px; color:#fff; background:var(--pink); box-shadow:0 5px 0 var(--pinkDeep);}
+.btn:active{transform:translateY(3px); box-shadow:0 2px 0 var(--pinkDeep);}
+.btn.lav{background:var(--lav); box-shadow:0 5px 0 var(--lavDeep);}
+.btn.ghost{background:var(--paper2); color:var(--ink); box-shadow:0 5px 0 var(--line);}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+.row{display:flex; gap:10px;}
+.row .btn{flex:1;}
+.start h1{font-weight:400; font-size:40px; margin:4px 0; color:var(--pink); text-shadow:3px 3px 0 #fff, 5px 5px 0 #FFD0E4;}
+
+/* book */
+.book{position:relative; display:flex; width:min(900px,100%); max-height:100%; background:var(--cover); border-radius:22px; padding:10px; box-shadow:0 8px 0 #B9467A;}
+.page{flex:1; background:var(--paper); border-radius:14px; padding:16px; overflow-y:auto; min-height:0;}
+.page.l{border-radius:14px 4px 4px 14px; display:flex; flex-direction:column; align-items:center; text-align:center; justify-content:center; gap:4px; border-right:2px dashed var(--line);}
+.page.r{border-radius:4px 14px 14px 4px;}
+.page .big{width:150px; height:150px; border:3px solid var(--line); border-radius:18px; background:var(--paper2);}
+.page .big svg{width:100%; height:100%;}
+.page h3{margin:0; font-weight:400; font-size:30px; color:var(--ink);}
+.inc{background:var(--paper2); border-radius:999px; padding:2px 14px; font-size:16px; color:var(--muted);}
+.desc{font-size:17px; color:var(--ink); line-height:1.5; max-width:22em; margin:6px 0;}
+.req{font-size:14px; color:var(--pinkDeep); min-height:1em;}
+.page.l .btn{max-width:260px;}
+.cells{display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:10px;}
+.cell{aspect-ratio:1; border:3px solid var(--line); border-radius:14px; background:var(--paper2); padding:2px; position:relative;}
+.cell svg{width:100%; height:100%;}
+.cell[aria-pressed="true"]{border-color:#5BD6A8; box-shadow:0 0 0 2px #5BD6A8;}
+.cell .n{position:absolute; right:4px; bottom:2px; font-size:12px; color:var(--muted);}
+.sil svg{filter:brightness(0) opacity(.28);}
+.cell .lock{position:absolute; left:4px; top:2px; font-size:13px;}
+@media (max-aspect-ratio: 1/1){
+  .book{flex-direction:column;}
+  .page.l{border-radius:14px 14px 4px 4px; border-right:none; border-bottom:2px dashed var(--line); flex:none;}
+  .page.r{border-radius:4px 4px 14px 14px;}
+  .page .big{width:110px; height:110px;}
+}
+
+/* card */
+.hero svg{width:110px; height:110px;}
+.field{display:flex; align-items:center; gap:8px; margin:10px 0;}
+.field label{font-size:15px; color:var(--muted); flex:none; width:52px; text-align:left;}
+.field input[type=text]{flex:1; min-width:0; font:inherit; font-size:18px; color:var(--ink); background:var(--paper2); border:3px solid var(--line); border-radius:14px; padding:6px 10px;}
+.field input[type=range]{flex:1; accent-color:var(--pink);}
+.field output{width:40px; text-align:right; font-size:14px; color:var(--muted);}
+.rec{display:flex; flex-direction:column; align-items:center; gap:6px; margin:8px 0 2px;}
+.recbtn{width:88px; height:88px; border-radius:50%; border:5px solid #fff; background:var(--pink); color:#fff; font-size:32px; box-shadow:0 6px 0 var(--pinkDeep); position:relative;}
+.recbtn.on{background:#FF4F8E;}
+.recbtn svg{position:absolute; inset:-9px; width:calc(100% + 18px); height:calc(100% + 18px); transform:rotate(-90deg);}
+.rec .hint{font-size:14px; color:var(--muted);}
+.err{color:var(--pinkDeep); font-size:14px; min-height:1em;}
+.link{border:none; background:none; color:var(--muted); font-size:14px; text-decoration:underline; margin-top:10px;}
+.swatches{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:6px 0 12px;}
+.sw{width:44px; height:44px; border-radius:50%; border:4px solid #fff; box-shadow:0 3px 0 var(--line);}
+.sw[aria-pressed="true"]{outline:3px solid var(--pink); outline-offset:2px;}
+.wardrobe canvas{width:120px; height:150px;}
+.rotate{position:fixed; inset:0; z-index:30; background:linear-gradient(#FFE6F1,#F6E4FF); display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:24px; color:#8A2E5C; font-size:15px;}
+.rotate .phone{width:64px; height:110px; border:6px solid #FF7EB3; border-radius:16px; background:#fff; animation:turn 2.2s ease-in-out infinite;}
+@keyframes turn{0%,30%{transform:rotate(0)} 60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait){ body:not(.portrait-ok) .rotate{display:flex;} }
+@media (orientation:landscape) and (max-height:520px){
+  .panel{padding:14px;}
+  .start h1{font-size:32px;}
+  #card .panel{width:min(660px,100%); display:grid; grid-template-columns:160px 1fr; column-gap:16px; align-items:center; text-align:left;}
+  #card .panel > *:not(.hero):not(.x){grid-column:2;}
+  #card .hero{grid-column:1; grid-row:1 / span 8; display:flex; justify-content:center;}
+  #card .hero svg{width:150px; height:150px;}
+  #card .field{margin:4px 0;}
+  #card .field.nm{padding-right:46px;}
+  #card .rec{flex-direction:row; justify-content:flex-start; margin:4px 0; gap:12px;}
+  #card .recbtn{width:62px; height:62px; font-size:24px; border-width:4px;}
+  #card .btn{margin-top:6px; padding:9px; font-size:18px;}
+  #card .link{margin-top:2px; justify-self:start; text-align:left; padding:2px 0;}
+}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="公主的庄园，拖动屏幕移动公主，点动物打开它的卡片"></canvas>
+<div class="rotate" id="rotate">
+  <div class="phone"></div>
+  <div style="font-size:26px">把手机横过来玩吧</div>
+  <p style="margin:0; color:#B5739A">转不过来的话，先在控制中心关掉「竖排方向锁定」</p>
+  <button class="btn ghost" id="portraitOk" style="max-width:240px">竖着也继续玩</button>
+</div>
+
+<div class="rate" id="rateEl">每分钟 ★0</div>
+<div class="coins"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#FFD66B" stroke="#E8A400" stroke-width="2"/><path d="M13 7l1.8 3.7 4 .6-2.9 2.8.7 4L13 16.2 9.4 18.1l.7-4-2.9-2.8 4-.6z" fill="#fff"/></svg><span id="coinEl">0</span></div>
+<div class="toast" id="toast" style="opacity:0"></div>
+<button class="unlock hidden" id="unlockBtn"></button>
+
+<div class="tools left">
+  <button class="tool" id="muteBtn" aria-label="静音">🔊</button>
+  <button class="tool" id="wardBtn" aria-label="公主衣柜">👗</button>
+</div>
+<div class="tools">
+  <button class="tool book" id="bookBtn" aria-label="动物图鉴">📖<span class="dot hidden" id="bookDot"></span></button>
+  <button class="tool" id="setBtn" aria-label="设置">⚙️</button>
+</div>
+
+<!-- start -->
+<div class="scrim" id="start">
+  <div class="panel start">
+    <h1>公主的声音庄园</h1>
+    <p id="startText">拖动屏幕带公主在庄园里散步。<br>领养小动物，亲自给它们录叫声，它们每叫一声都会帮你赚星星币。</p>
+    <button class="btn" id="startBtn">进入庄园</button>
+  </div>
+</div>
+
+<!-- book -->
+<div class="scrim hidden" id="book">
+  <div class="book">
+    <button class="x" id="bookClose" aria-label="关闭图鉴">✕</button>
+    <div class="page l">
+      <div class="big" id="bBig"></div>
+      <h3 id="bName">???</h3>
+      <div class="inc" id="bInc"></div>
+      <div class="desc" id="bDesc"></div>
+      <div class="req" id="bReq"></div>
+      <button class="btn" id="bAdopt">领养</button>
+    </div>
+    <div class="page r"><div class="cells" id="cells"></div></div>
+  </div>
+</div>
+
+<!-- animal card -->
+<div class="scrim hidden" id="card">
+  <div class="panel">
+    <button class="x" id="cardClose" aria-label="关闭">✕</button>
+    <div class="hero" id="cHero"></div>
+    <div class="field nm"><label for="cName">名字</label><input type="text" id="cName" maxlength="8"></div>
+    <div class="rec">
+      <button class="recbtn" id="recBtn" aria-label="录音">🎤<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#FFD66B" stroke-width="6" stroke-dasharray="289" stroke-dashoffset="289" id="ring" stroke-linecap="round"/></svg></button>
+      <div class="hint" id="recHint"></div>
+    </div>
+    <div class="err" id="recErr"></div>
+    <button class="link" id="importBtn">录不了？从手机里选一段录音</button>
+    <input type="file" id="importIn" accept="audio/*" hidden>
+    <div class="field"><label for="cPitch">变声</label><input type="range" id="cPitch" min="0.5" max="2" step="0.05"><output id="cPitchOut"></output></div>
+    <div class="row"><button class="btn ghost" id="playBtn">▶ 试听</button><button class="btn lav" id="upBtn">升级</button></div>
+    <button class="link" id="releaseBtn">送它回森林</button>
+  </div>
+</div>
+
+<!-- wardrobe -->
+<div class="scrim hidden" id="ward">
+  <div class="panel wardrobe">
+    <button class="x" id="wardClose" aria-label="关闭">✕</button>
+    <h2>公主衣柜</h2>
+    <canvas id="wardCvs" width="240" height="300"></canvas>
+    <p>裙子</p><div class="swatches" id="dressSw"></div>
+    <p>头发</p><div class="swatches" id="hairSw"></div>
+  </div>
+</div>
+
+<!-- settings -->
+<div class="scrim hidden" id="settings">
+  <div class="panel">
+    <button class="x" id="setClose" aria-label="关闭">✕</button>
+    <h2>设置</h2>
+    <p>拖动屏幕任意位置移动公主，电脑上也可以用方向键或 WASD。点小动物可以改名字、录叫声、升级。</p>
+    <p>录音只保存在这台设备上。</p>
+    <button class="btn ghost" id="resetBtn">清空存档，重新开始</button>
+  </div>
+</div>
+
+<script>
+(() => {
+/* ================= data ================= */
+const AREAS = {
+  garden:{name:'草莓花园', x:0,    y:0,   w:1100, h:1300, cost:0},
+  hill:  {name:'风车山丘', x:1100, y:0,   w:900,  h:650,  cost:1000,  gate:{x:1100,y:330}},
+  lake:  {name:'糖果湖',   x:1100, y:650, w:900,  h:650,  cost:15000, gate:{x:1100,y:980}},
+};
+const WW = 2000, WH = 1300;
+const SPECIES = [
+  {id:'bunny',  name:'小兔',   area:'garden', price:0,      base:1,    pitch:1.25, size:78, color:'#FFFFFF', inner:'#FFC2DA', ears:'long', acc:'bow', desc:'耳朵比身体还长，最爱偷吃草莓。'},
+  {id:'cat',    name:'小猫',   area:'garden', price:40,     base:2,    pitch:1.3,  size:78, color:'#FFE1C2', inner:'#FFB98A', ears:'tri', acc:'crown', whisk:true, desc:'每天睡十八个小时，醒着的时候在照镜子。'},
+  {id:'pig',    name:'小猪',   area:'garden', price:150,    base:5,    pitch:0.95, size:80, color:'#FFC9DD', inner:'#FF9EC4', ears:'small', acc:'bow', snout:true, desc:'粉粉的鼻子一拱一拱，闻到蛋糕就跑过来。'},
+  {id:'sheep',  name:'小羊',   area:'garden', price:400,    base:11,   pitch:1.1,  size:82, color:'#FFF6FA', inner:'#F7D3E4', ears:'side', acc:'crown', fluff:true, desc:'毛太蓬了，下雨天会变成一朵大云。'},
+  {id:'deer',   name:'小鹿',   area:'hill',   price:1200,   base:30,   pitch:1.05, size:88, color:'#E9C29E', inner:'#FFE9D6', ears:'side', acc:'bow', antler:true, spots:true, desc:'角上挂着小蝴蝶结，走路一蹦一跳。'},
+  {id:'bear',   name:'小熊',   area:'hill',   price:3000,   base:70,   pitch:0.7,  size:96, color:'#E8C3A8', inner:'#F7DCC8', ears:'round', acc:'bow', muzzle:true, desc:'个子最大，胆子最小，最怕蜜蜂。'},
+  {id:'fox',    name:'小狐狸', area:'hill',   price:7000,   base:160,  pitch:1.15, size:84, color:'#FFB27A', inner:'#FFFFFF', ears:'tall', acc:'crown', cheeks:true, desc:'表情很高冷，其实特别想被摸头。'},
+  {id:'duck',   name:'小鸭',   area:'lake',   price:18000,  base:350,  pitch:1.5,  size:76, color:'#FFF3A8', inner:'#FFB25C', ears:'none', acc:'bow', beak:true, tuft:true, desc:'在糖果湖里划水，嘎嘎声全庄园都听得见。'},
+  {id:'penguin',name:'企鹅',   area:'lake',   price:40000,  base:800,  pitch:1.4,  size:82, color:'#7D86C9', inner:'#FFFFFF', ears:'none', acc:'crown', beak:true, patch:true, desc:'穿着燕尾服，坚持认为自己是王子。'},
+  {id:'unicorn',name:'独角兽', area:'lake',   price:120000, base:2000, pitch:1.6,  size:96, color:'#FFFFFF', inner:'#FFC2DA', ears:'tri', acc:'none', horn:true, mane:true, desc:'传说只有声音最可爱的公主才能领养它。'},
+];
+const SP = Object.fromEntries(SPECIES.map(s=>[s.id,s]));
+const DRESSES = ['#FF9EC6','#C7A6FF','#9EE6C9','#FFE08A','#9ED8FF'];
+const HAIRS = ['#FFB3D1','#FFE0A3','#C98F6B','#CDB8FF'];
+
+function animalSVG(id){
+  const s = SP[id], c = s.color, k = s.inner, L = '#E87AA8';
+  const st = `stroke="${L}" stroke-width="2.5" stroke-linejoin="round"`;
+  let back='', body='', head='', face='', front='';
+  if(s.ears==='long'){
+    back += `<g transform="rotate(-12 38 30)"><ellipse cx="38" cy="14" rx="8" ry="19" fill="${c}" ${st}/><ellipse cx="38" cy="15" rx="4" ry="13" fill="${k}"/></g><g transform="rotate(14 62 30)"><ellipse cx="62" cy="14" rx="8" ry="19" fill="${c}" ${st}/><ellipse cx="62" cy="15" rx="4" ry="13" fill="${k}"/></g>`;
+  } else if(s.ears==='tri'||s.ears==='tall'||s.ears==='small'){
+    const h = s.ears==='tall'?8:s.ears==='small'?22:14, tx = s.ears==='small'?32:30;
+    back += `<path d="M28 36 L${tx} ${h} L48 26Z" fill="${c}" ${st}/><path d="M32 32 L33 ${h+8} L43 27Z" fill="${k}"/><path d="M72 36 L${100-tx} ${h} L52 26Z" fill="${c}" ${st}/><path d="M68 32 L67 ${h+8} L57 27Z" fill="${k}"/>`;
+  } else if(s.ears==='round'){
+    back += `<circle cx="30" cy="27" r="10" fill="${c}" ${st}/><circle cx="30" cy="27" r="5" fill="${k}"/><circle cx="70" cy="27" r="10" fill="${c}" ${st}/><circle cx="70" cy="27" r="5" fill="${k}"/>`;
+  } else if(s.ears==='side'){
+    back += `<ellipse cx="25" cy="42" rx="11" ry="5.5" transform="rotate(-25 25 42)" fill="${c}" ${st}/><ellipse cx="75" cy="42" rx="11" ry="5.5" transform="rotate(25 75 42)" fill="${c}" ${st}/>`;
+  }
+  if(s.antler) back += `<path d="M38 26 L32 8 M34 14 L26 10 M62 26 L68 8 M66 14 L74 10" stroke="#B9865E" stroke-width="4" stroke-linecap="round" fill="none"/>`;
+  if(s.mane) ['#FFB3D1','#CDB8FF','#AEEFD8','#FFE29A'].forEach((m,i)=>{ back += `<circle cx="${30+i*2}" cy="${26+i*9}" r="9" fill="${m}"/>`; });
+  body += `<ellipse cx="50" cy="80" rx="25" ry="17" fill="${c}" ${st}/>`;
+  if(s.patch) body += `<ellipse cx="50" cy="82" rx="15" ry="12" fill="#fff"/>`;
+  const foot = s.beak?'#FFB25C':c;
+  body += `<ellipse cx="40" cy="95" rx="7" ry="4" fill="${foot}" ${st}/><ellipse cx="60" cy="95" rx="7" ry="4" fill="${foot}" ${st}/>`;
+  body += `<path d="M28 84 Q34 90 40 84 Q46 90 50 84 Q54 90 60 84 Q66 90 72 84" fill="none" stroke="#FF9EC6" stroke-width="3" stroke-linecap="round"/>`;
+  head += `<circle cx="50" cy="46" r="24" fill="${c}" ${st}/>`;
+  if(s.fluff){ for(let i=0;i<7;i++){ const a=Math.PI*(1.05+i*0.15); head += `<circle cx="${(50+Math.cos(a)*22).toFixed(1)}" cy="${(44+Math.sin(a)*22).toFixed(1)}" r="8" fill="${c}" ${st}/>`; } head += `<circle cx="50" cy="48" r="18" fill="${k}"/>`; }
+  if(s.patch) head += `<ellipse cx="50" cy="50" rx="17" ry="15" fill="#fff"/>`;
+  if(s.cheeks) head += `<path d="M27 50 Q38 66 50 60 Q62 66 73 50 Q66 64 50 68 Q34 64 27 50Z" fill="#fff"/>`;
+  if(s.spots) head += `<circle cx="36" cy="34" r="2.5" fill="#FFF5EA"/><circle cx="64" cy="33" r="2" fill="#FFF5EA"/><circle cx="58" cy="28" r="1.8" fill="#FFF5EA"/>`;
+  if(s.tuft) head += `<path d="M48 22 Q50 12 54 18 Q55 12 58 20" fill="none" stroke="${L}" stroke-width="2.5" stroke-linecap="round"/>`;
+  if(s.muzzle) head += `<ellipse cx="50" cy="56" rx="10" ry="7" fill="${k}"/>`;
+  face += `<ellipse cx="40" cy="45" rx="3.6" ry="4.4" fill="#5A2140"/><ellipse cx="60" cy="45" rx="3.6" ry="4.4" fill="#5A2140"/><circle cx="41.3" cy="43.4" r="1.4" fill="#fff"/><circle cx="61.3" cy="43.4" r="1.4" fill="#fff"/>`;
+  face += `<ellipse cx="32" cy="54" rx="4.5" ry="2.8" fill="#FF7EB3" opacity=".5"/><ellipse cx="68" cy="54" rx="4.5" ry="2.8" fill="#FF7EB3" opacity=".5"/>`;
+  if(s.beak) face += `<ellipse cx="50" cy="54" rx="7" ry="4.5" fill="#FFB25C" stroke="#E8913A" stroke-width="1.5"/>`;
+  else if(s.snout) face += `<ellipse cx="50" cy="54" rx="8" ry="5.5" fill="${k}" ${st}/><ellipse cx="47" cy="54" rx="1.4" ry="2" fill="#C2507F"/><ellipse cx="53" cy="54" rx="1.4" ry="2" fill="#C2507F"/>`;
+  else face += `<ellipse cx="50" cy="51.5" rx="2.2" ry="1.6" fill="#C2507F"/><path d="M46 54 Q48 57 50 54 Q52 57 54 54" fill="none" stroke="#5A2140" stroke-width="1.6" stroke-linecap="round"/>`;
+  if(s.whisk) face += `<path d="M24 50 L33 52 M24 56 L33 55 M76 50 L67 52 M76 56 L67 55" stroke="#C99C7E" stroke-width="1.4" stroke-linecap="round"/>`;
+  if(s.horn) front += `<path d="M45 24 L50 2 L55 24Z" fill="#FFD66B" stroke="#E8B23A" stroke-width="2"/><path d="M46.5 18 L53.5 15 M48 11 L52.5 9" stroke="#E8B23A" stroke-width="1.5"/><circle cx="66" cy="28" r="4" fill="#FFB3D1"/><circle cx="70" cy="25" r="3" fill="#CDB8FF"/>`;
+  if(s.acc==='crown') front += `<path d="M39 24 L39 14 L44 19 L50 9 L56 19 L61 14 L61 24Z" fill="#FFD66B" stroke="#E8B23A" stroke-width="2" stroke-linejoin="round"/><circle cx="50" cy="19" r="2.2" fill="#FF7EB3"/>`;
+  if(s.acc==='bow') front += `<g transform="translate(66 27) rotate(18)"><path d="M0 0 L-11 -7 L-11 7Z M0 0 L11 -7 L11 7Z" fill="#FF7EB3" stroke="#D9558C" stroke-width="1.6" stroke-linejoin="round"/><circle r="3.4" fill="#FFB3D1" stroke="#D9558C" stroke-width="1.4"/></g>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">${back}${body}${head}${face}${front}</svg>`;
+}
+const IMG = {};
+SPECIES.forEach(s=>{ const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(animalSVG(s.id)); IMG[s.id]=im; });
+
+/* ================= state ================= */
+const KEY = 'pve_state_v2';
+let S = null;
+try { S = JSON.parse(localStorage.getItem(KEY)||'null'); } catch(e){}
+if(!S){
+  let old = null; try{ old = JSON.parse(localStorage.getItem('pvz_state_v1')||'null'); }catch(e){}
+  S = { coins: old ? old.coins : 30, animals: [], unlocked:{garden:true, hill:false, lake:false},
+        p:{x:420, y:760}, look:{dress:0, hair:0}, muted: old ? !!old.muted : false, last: old ? old.last : Date.now(), seen:['bunny'] };
+  if(old && Array.isArray(old.animals)) old.animals.forEach(a=>{ if(SP[a.sp]) S.animals.push({uid:a.uid, sp:a.sp, name:a.name, lvl:a.lvl||1, pitch:a.pitch||SP[a.sp].pitch, voice:!!a.voice}); });
+  if(!S.animals.length) S.animals.push({uid:uid(), sp:'bunny', name:'糯米', lvl:1, pitch:SP.bunny.pitch, voice:false});
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+let saveT=null;
+function saveSoon(){ if(saveT) return; saveT=setTimeout(()=>{ saveT=null; if(typeof P!=='undefined') S.p={x:Math.round(P.x),y:Math.round(P.y)}; save(); }, 300); }
+function save(){ S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify({...S, animals:S.animals.map(({uid,sp,name,lvl,pitch,voice})=>({uid,sp,name,lvl,pitch,voice}))})); }catch(e){} }
+const income = a => Math.round(SP[a.sp].base * a.lvl * (1 + (a.lvl-1)*0.25));
+const upCost = a => Math.round(Math.max(20, SP[a.sp].price*0.6) * Math.pow(1.7, a.lvl-1));
+const owned = id => S.animals.filter(a=>a.sp===id).length;
+const adoptCost = sp => sp.price===0 ? Math.round(15*Math.pow(1.4, owned(sp.id))) : Math.round(sp.price*Math.pow(1.4, owned(sp.id)));
+const CRY = 7;
+function fmt(n){ n=Math.floor(n); if(n<10000) return String(n); if(n<1e8) return (n/1e4).toFixed(n<1e5?1:0).replace(/\.0$/,'')+'万'; return (n/1e8).toFixed(1).replace(/\.0$/,'')+'亿'; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ================= world ================= */
+function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const R = rng(7);
+const OBST = [
+  {type:'ell', x:480, y:520, rx:140, ry:78},   // pond
+  {type:'ell', x:1560, y:1010, rx:290, ry:165},// candy lake
+  {type:'ell', x:230, y:250, rx:120, ry:55},   // castle base
+  {type:'ell', x:1700, y:300, rx:55, ry:28},   // windmill base
+];
+const inEll = (o,x,y,pad=0)=>{ const dx=(x-o.x)/(o.rx+pad), dy=(y-o.y)/(o.ry+pad); return dx*dx+dy*dy<1; };
+const TREES = [];
+[[70,520],[90,820],[60,1150],[300,1220],[620,1240],[900,1210],[1050,80],[700,90],[520,60],[960,420],[60,380],
+ [1180,90],[1350,60],[1950,90],[1960,420],[1230,560],[1900,600],
+ [1170,760],[1150,1230],[1450,1250],[1960,1230],[1950,820]].forEach(([x,y])=>TREES.push({x,y,s:0.85+R()*0.35, k:R()<0.5?'#FFC2DA':'#FFD9E8'}));
+TREES.forEach(t=>OBST.push({type:'ell', x:t.x, y:t.y, rx:16, ry:10}));
+function areaAt(x,y){ for(const k in AREAS){ const a=AREAS[k]; if(x>=a.x&&x<a.x+a.w&&y>=a.y&&y<a.y+a.h) return k; } return 'garden'; }
+function walkable(x,y,pad=14){
+  if(x<pad+20||y<pad+30||x>WW-pad-20||y>WH-pad-10) return false;
+  if(!S.unlocked[areaAt(x,y)]) return false;
+  for(const o of OBST) if(inEll(o,x,y,pad*0.6)) return false;
+  return true;
+}
+const FLOWERS = [];
+for(let i=0;i<320;i++){ const x=R()*WW, y=R()*WH; if(OBST.some(o=>inEll(o,x,y,20))) continue; FLOWERS.push({x,y,c:['#FFB3D1','#FFFFFF','#FFE29A','#CDB8FF'][i%4], s:2+R()*1.5}); }
+const STRAW = []; for(let i=0;i<5;i++) for(let j=0;j<4;j++) STRAW.push({x:700+i*44+(j%2)*20, y:880+j*38});
+
+/* ================= canvas ================= */
+const cvs = document.getElementById('game'), ctx = cvs.getContext('2d');
+let VW=0, VH=0, dpr=1, SC=1, camX=0, camY=0;
+function resize(){ dpr=Math.min(window.devicePixelRatio||1,2.5); VW=innerWidth; VH=innerHeight; cvs.width=VW*dpr; cvs.height=VH*dpr; SC=Math.max(0.55, Math.min(VW,VH)/520); }
+addEventListener('resize', resize); resize();
+
+/* ================= entities ================= */
+const P = {x:S.p.x, y:S.p.y, dir:1, moving:false, t:0};
+if(!walkable(P.x,P.y)){ P.x=420; P.y=760; }
+const RT = new Map(); // runtime per animal
+function rt(a){
+  let r = RT.get(a.uid);
+  if(!r){
+    const pt = randPoint(homeOf(a));
+    r = {x:pt.x, y:pt.y, tx:pt.x, ty:pt.y, wait:Math.random()*3, dir:1, hop:0, next:performance.now()+(2+Math.random()*6)*1000, bob:Math.random()*6};
+    RT.set(a.uid, r);
+  }
+  return r;
+}
+function homeOf(a){ const ar = SP[a.sp].area; return S.unlocked[ar] ? ar : 'garden'; }
+function randPoint(area){
+  const A = AREAS[area];
+  for(let i=0;i<60;i++){ const x=A.x+80+Math.random()*(A.w-160), y=A.y+90+Math.random()*(A.h-160); if(walkable(x,y,30)) return {x,y}; }
+  return {x:420,y:760};
+}
+const floats = [];
+
+/* ================= input ================= */
+let joy = null; const keys = {};
+addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true; });
+addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+cvs.addEventListener('pointerdown', e=>{
+  if(joy) return;
+  joy = {id:e.pointerId, sx:e.clientX, sy:e.clientY, x:e.clientX, y:e.clientY, t:performance.now(), moved:0};
+  cvs.setPointerCapture(e.pointerId); ac();
+});
+cvs.addEventListener('pointermove', e=>{ if(!joy||e.pointerId!==joy.id) return; joy.x=e.clientX; joy.y=e.clientY; joy.moved=Math.max(joy.moved, Math.hypot(joy.x-joy.sx, joy.y-joy.sy)); });
+const endJoy = e=>{
+  if(!joy||e.pointerId!==joy.id) return;
+  if(joy.moved<10 && performance.now()-joy.t<350){
+    const wx = joy.sx/SC+camX, wy = joy.sy/SC+camY;
+    let hit=null, bd=1e9;
+    for(const a of S.animals){ const r=rt(a), sz=SP[a.sp].size; const d=Math.hypot(wx-r.x, wy-(r.y-sz*0.45)); if(d<sz*0.6 && d<bd){ bd=d; hit=a; } }
+    if(hit) openCard(hit.uid);
+  }
+  joy=null;
+};
+cvs.addEventListener('pointerup', endJoy); cvs.addEventListener('pointercancel', endJoy);
+
+/* ================= audio ================= */
+let AC=null; const buffers=new Map(); let playing=0;
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(AC.state==='suspended') AC.resume(); return AC; }
+let dbP=null;
+function db(){ if(!dbP) dbP=new Promise((res,rej)=>{ try{ const r=indexedDB.open('pvz_voices',1); r.onupgradeneeded=()=>r.result.createObjectStore('v'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }); return dbP; }
+async function putVoice(id,blob){ try{ const d=await db(); await new Promise((res,rej)=>{ const tx=d.transaction('v','readwrite'); tx.objectStore('v').put(blob,id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){} }
+async function getVoice(id){ try{ const d=await db(); return await new Promise(res=>{ const r=d.transaction('v').objectStore('v').get(id); r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null); }); }catch(e){ return null; } }
+async function delVoice(id){ try{ const d=await db(); d.transaction('v','readwrite').objectStore('v').delete(id); }catch(e){} }
+async function loadBuffer(a){
+  if(buffers.has(a.uid)) return buffers.get(a.uid);
+  const blob=await getVoice(a.uid); if(!blob) return null;
+  try{
+    const c=ac(); let buf=await c.decodeAudioData(await blob.arrayBuffer());
+    if(buf.duration>3.2){ // imported clips: keep the first 3 seconds
+      const n=Math.floor(3*buf.sampleRate), cut=c.createBuffer(buf.numberOfChannels,n,buf.sampleRate);
+      for(let ch=0; ch<buf.numberOfChannels; ch++) cut.getChannelData(ch).set(buf.getChannelData(ch).subarray(0,n));
+      buf=cut;
+    }
+    buffers.set(a.uid,buf); return buf;
+  }catch(e){ return null; }
+}
+async function playVoice(a, force, vol=1){
+  if(S.muted && !force) return;
+  if(!force && playing>=3) return;
+  const buf=await loadBuffer(a); const c=ac(); if(!buf||!c) return;
+  const src=c.createBufferSource(); src.buffer=buf; src.playbackRate.value=a.pitch;
+  const g=c.createGain(); g.gain.value=0.95*vol; src.connect(g).connect(c.destination);
+  playing++; src.onended=()=>playing--; src.start();
+}
+
+/* ================= HUD ================= */
+const coinEl=document.getElementById('coinEl'), rateEl=document.getElementById('rateEl'), toastEl=document.getElementById('toast');
+const unlockBtn=document.getElementById('unlockBtn'), bookDot=document.getElementById('bookDot');
+const rate = ()=> S.animals.filter(a=>a.voice).reduce((t,a)=>t+income(a),0)*60/CRY;
+function hud(){
+  coinEl.textContent=fmt(S.coins); rateEl.textContent='每分钟 ★'+fmt(rate());
+  const canAdopt = SPECIES.some(sp=>S.unlocked[sp.area] && owned(sp.id)===0 && S.coins>=adoptCost(sp));
+  bookDot.classList.toggle('hidden', !canAdopt);
+}
+let toastT=null;
+function toast(msg, ms=2200){ toastEl.textContent=msg; toastEl.style.opacity=1; clearTimeout(toastT); toastT=setTimeout(()=>toastEl.style.opacity=0, ms); }
+
+let nearGate=null;
+unlockBtn.onclick=()=>{
+  if(!nearGate) return; const A=AREAS[nearGate];
+  if(S.coins<A.cost) return;
+  S.coins-=A.cost; S.unlocked[nearGate]=true; save(); hud();
+  for(const a of S.animals) if(SP[a.sp].area===nearGate){ const r=rt(a); const p=randPoint(nearGate); r.tx=p.x; r.ty=p.y; }
+  toast(`${A.name}开放啦！`); nearGate=null; unlockBtn.classList.add('hidden');
+};
+
+/* ================= game loop ================= */
+let last=performance.now(), T=0, curArea='garden';
+function step(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; T+=dt;
+  // princess
+  let ix=0, iy=0;
+  if(joy){ const dx=joy.x-joy.sx, dy=joy.y-joy.sy, d=Math.hypot(dx,dy); if(d>8){ const m=Math.min(d,55)/55; ix=dx/d*m; iy=dy/d*m; } }
+  if(keys['arrowleft']||keys['a']) ix-=1; if(keys['arrowright']||keys['d']) ix+=1;
+  if(keys['arrowup']||keys['w']) iy-=1; if(keys['arrowdown']||keys['s']) iy+=1;
+  const im=Math.hypot(ix,iy); if(im>1){ ix/=im; iy/=im; }
+  const sp=210;
+  P.moving = im>0.05;
+  if(P.moving){
+    const nx=P.x+ix*sp*dt, ny=P.y+iy*sp*dt;
+    if(walkable(nx,P.y)) P.x=nx; if(walkable(P.x,ny)) P.y=ny;
+    if(Math.abs(ix)>0.1) P.dir = ix>0?1:-1;
+    P.t+=dt;
+  }
+  // area toast
+  const ar=areaAt(P.x,P.y); if(ar!==curArea){ curArea=ar; toast(AREAS[ar].name); }
+  // gates
+  nearGate=null;
+  for(const k of ['hill','lake']){ const A=AREAS[k]; if(!S.unlocked[k] && Math.hypot(P.x-A.gate.x, P.y-A.gate.y)<130) nearGate=k; }
+  if(nearGate){ const A=AREAS[nearGate]; unlockBtn.textContent=`解锁「${A.name}」 ★${fmt(A.cost)}`; unlockBtn.disabled=S.coins<A.cost; unlockBtn.classList.remove('hidden'); }
+  else unlockBtn.classList.add('hidden');
+  // animals
+  for(const a of S.animals){
+    const r=rt(a); r.bob+=dt;
+    if(r.hop>0) r.hop-=dt;
+    if(r.wait>0){ r.wait-=dt; }
+    else {
+      const dx=r.tx-r.x, dy=r.ty-r.y, d=Math.hypot(dx,dy);
+      if(d<4){ r.wait=1.5+Math.random()*4; const p=randPoint(homeOf(a)); r.tx=p.x; r.ty=p.y; }
+      else {
+        const v=(SP[a.sp].size>90?38:48)*dt, nx=r.x+dx/d*v, ny=r.y+dy/d*v;
+        if(walkable(nx,ny,20)){ r.x=nx; r.y=ny; r.dir=dx>0?1:-1; } else { r.wait=0.5; const p=randPoint(homeOf(a)); r.tx=p.x; r.ty=p.y; }
+      }
+    }
+    if(!S.unlocked[areaAt(r.x,r.y)]){ const p=randPoint(homeOf(a)); r.x=r.tx=p.x; r.y=r.ty=p.y; }
+    if(a.voice && now>=r.next){ cry(a,r); r.next=now+(CRY*0.6+Math.random()*CRY*0.8)*1000; }
+  }
+  for(const f of floats) f.t+=dt;
+  while(floats.length && floats[0].t>1.2) floats.shift();
+  draw();
+  requestAnimationFrame(step);
+}
+function cry(a,r){
+  const e=income(a); S.coins+=e; r.hop=0.5;
+  floats.push({x:r.x, y:r.y-SP[a.sp].size-6, txt:'+'+fmt(e), t:0});
+  // louder when the princess is close
+  const d=Math.hypot(P.x-r.x,P.y-r.y);
+  playVoice(a,false, Math.max(0.25, 1-d/900));
+  hud(); saveSoon();
+  if(cardUid===a.uid) refreshCard();
+}
+
+/* ================= drawing ================= */
+function draw(){
+  const vw=VW/SC, vh=VH/SC;
+  camX = vw>=WW ? (WW-vw)/2 : Math.max(0, Math.min(WW-vw, P.x-vw/2));
+  camY = vh>=WH ? (WH-vh)/2 : Math.max(0, Math.min(WH-vh, P.y-vh/2));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle='#BDE8F2'; ctx.fillRect(0,0,VW,VH);
+  ctx.setTransform(dpr*SC,0,0,dpr*SC,-camX*dpr*SC,-camY*dpr*SC);
+  const vis=(x,y,m=120)=> x>camX-m && x<camX+vw+m && y>camY-m && y<camY+vh+m;
+
+  // water rim & ground
+  ctx.fillStyle='#FFE2EC'; rr(-14,-14,WW+28,WH+28,40); ctx.fill();
+  ctx.fillStyle='#D8F5E3'; rr(0,0,1100,WH,30); ctx.fill();
+  ctx.fillStyle='#EEE2FA'; ctx.fillRect(1100,0,900,650);
+  ctx.fillStyle='#D9F2F2'; ctx.fillRect(1100,650,900,650);
+  // grass speckles
+  ctx.fillStyle='rgba(255,255,255,.35)';
+  for(let x=Math.floor(camX/60)*60; x<camX+vw+60; x+=60) for(let y=Math.floor(camY/60)*60; y<camY+vh+60; y+=60){ const o=((x*7+y*13)%37); ctx.beginPath(); ctx.ellipse(x+o,y+(o*3)%40,6,3,0,0,Math.PI*2); ctx.fill(); }
+  // paths
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  const path=()=>{ ctx.beginPath(); ctx.moveTo(300,320); ctx.quadraticCurveTo(360,700,700,700); ctx.quadraticCurveTo(950,700,1100,330);
+    ctx.moveTo(700,700); ctx.quadraticCurveTo(900,900,1100,980); ctx.moveTo(1100,330); ctx.quadraticCurveTo(1400,300,1660,330); ctx.moveTo(1100,980); ctx.quadraticCurveTo(1200,820,1300,830); };
+  ctx.strokeStyle='#F6D3C4'; ctx.lineWidth=58; path(); ctx.stroke();
+  ctx.strokeStyle='#FBE6DA'; ctx.lineWidth=40; path(); ctx.stroke();
+  // pond
+  ctx.fillStyle='#FFC6DE'; ctx.beginPath(); ctx.ellipse(480,520,150,88,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#A8E4F0'; ctx.beginPath(); ctx.ellipse(480,520,138,76,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=3; for(let i=0;i<3;i++){ const w=Math.sin(T*1.5+i)*8; ctx.beginPath(); ctx.moveTo(420+i*40+w,500+i*14); ctx.lineTo(450+i*40+w,500+i*14); ctx.stroke(); }
+  lily(440,540); lily(540,495);
+  // candy lake
+  if(vis(1560,1010,400)){
+    ctx.fillStyle='#FFB3D1'; ctx.beginPath(); ctx.ellipse(1560,1010,305,180,0,0,Math.PI*2); ctx.fill();
+    const g=ctx.createLinearGradient(0,850,0,1180); g.addColorStop(0,'#B9E8F8'); g.addColorStop(1,'#D9C8FF');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(1560,1010,290,165,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.75)'; for(let i=0;i<6;i++){ ctx.globalAlpha=.5+.5*Math.sin(T*2+i); star(1400+i*55,940+(i%3)*50,5); } ctx.globalAlpha=1;
+    // candy island
+    ctx.fillStyle='#FFF0F6'; ctx.beginPath(); ctx.ellipse(1600,1020,60,26,0,0,Math.PI*2); ctx.fill();
+    lollipop(1585,1010); lollipop(1620,1018,'#B79CFF');
+    lily(1450,1080); lily(1700,960);
+  }
+  // strawberries
+  for(const s of STRAW){ if(!vis(s.x,s.y)) continue; ctx.fillStyle='#9EDDB4'; ctx.beginPath(); ctx.ellipse(s.x,s.y,14,7,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FF6F9F'; ctx.beginPath(); ctx.moveTo(s.x-6,s.y-6); ctx.lineTo(s.x+6,s.y-6); ctx.lineTo(s.x,s.y+5); ctx.closePath(); ctx.fill(); ctx.fillStyle='#fff'; ctx.fillRect(s.x-2,s.y-4,1.5,1.5); ctx.fillRect(s.x+1.5,s.y-2,1.5,1.5); }
+  // flowers
+  for(const f of FLOWERS){ if(!vis(f.x,f.y,20)) continue; ctx.fillStyle=f.c; for(let k=0;k<5;k++){ const a=k*1.2566; ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*f.s*1.2, f.y+Math.sin(a)*f.s*1.2, f.s, 0, Math.PI*2); ctx.fill(); } ctx.fillStyle='#FFD66B'; ctx.beginPath(); ctx.arc(f.x,f.y,f.s*.7,0,Math.PI*2); ctx.fill(); }
+
+  // y-sorted objects
+  const objs=[];
+  TREES.forEach(t=>{ if(vis(t.x,t.y,160)) objs.push({y:t.y, d:()=>tree(t)}); });
+  objs.push({y:300, d:castle}); objs.push({y:310, d:windmill});
+  for(const a of S.animals){ const r=rt(a); if(vis(r.x,r.y)) objs.push({y:r.y, d:()=>drawAnimal(a,r)}); }
+  objs.push({y:P.y, d:()=>princess(ctx,P.x,P.y,P.dir,P.moving?P.t:0,S.look)});
+  objs.sort((a,b)=>a.y-b.y).forEach(o=>o.d());
+
+  // locked veils & fences
+  for(const k of ['hill','lake']){
+    const A=AREAS[k];
+    if(S.unlocked[k]){ arch(A.gate.x, A.gate.y); continue; }
+    ctx.fillStyle='rgba(255,246,250,.72)'; ctx.fillRect(A.x,A.y,A.w,A.h);
+    fence(A.x, A.y+12, A.x, A.y+A.h-12);
+    if(k==='lake' && !S.unlocked.hill) {} else if(k==='lake') fence(A.x+12, A.y, A.x+A.w-12, A.y);
+    if(k==='hill' && S.unlocked.lake) fence(A.x+12, A.y+A.h, A.x+A.w-12, A.y+A.h);
+    // lock + label at gate
+    lock(A.gate.x+70, A.gate.y-40);
+    ctx.font='28px "ZCOOL KuaiLe","PingFang SC",sans-serif'; ctx.textAlign='left';
+    ctx.lineWidth=6; ctx.strokeStyle='#fff'; ctx.fillStyle='#8A2E5C';
+    ctx.strokeText(A.name, A.gate.x+105, A.gate.y-30); ctx.fillText(A.name, A.gate.x+105, A.gate.y-30);
+    ctx.font='20px "ZCOOL KuaiLe","PingFang SC",sans-serif';
+    ctx.strokeText('★'+fmt(A.cost)+' 解锁', A.gate.x+105, A.gate.y); ctx.fillStyle='#D9558C'; ctx.fillText('★'+fmt(A.cost)+' 解锁', A.gate.x+105, A.gate.y);
+  }
+  // floats
+  ctx.textAlign='center'; ctx.font='24px "ZCOOL KuaiLe","PingFang SC",sans-serif';
+  for(const f of floats){ ctx.globalAlpha=Math.max(0,1-f.t/1.2); const y=f.y-f.t*40; ctx.lineWidth=5; ctx.strokeStyle='#fff'; ctx.strokeText(f.txt+' ★',f.x,y); ctx.fillStyle='#E8A400'; ctx.fillText(f.txt+' ★',f.x,y); }
+  ctx.globalAlpha=1;
+
+  // joystick (screen space)
+  if(joy && joy.moved>=10){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const dx=joy.x-joy.sx, dy=joy.y-joy.sy, d=Math.hypot(dx,dy), m=Math.min(d,55);
+    ctx.strokeStyle='rgba(255,255,255,.95)'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(joy.sx,joy.sy,60,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(255,182,213,.7)'; ctx.beginPath(); ctx.arc(joy.sx+(d?dx/d*m:0), joy.sy+(d?dy/d*m:0), 28, 0, Math.PI*2); ctx.fill();
+  }
+}
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function star(x,y,r){ ctx.beginPath(); for(let i=0;i<8;i++){ const a=i*Math.PI/4, q=i%2?r*.4:r; ctx.lineTo(x+Math.cos(a)*q,y+Math.sin(a)*q); } ctx.closePath(); ctx.fill(); }
+function lily(x,y){ ctx.fillStyle='#9EDDB4'; ctx.beginPath(); ctx.arc(x,y,13,0.3,Math.PI*2-0.3); ctx.lineTo(x,y); ctx.fill(); ctx.fillStyle='#FFB3D1'; ctx.beginPath(); ctx.arc(x+2,y-3,5,0,Math.PI*2); ctx.fill(); }
+function lollipop(x,y,c='#FF7EB3'){ ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y-30); ctx.stroke(); ctx.fillStyle=c; ctx.beginPath(); ctx.arc(x,y-38,11,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(x,y-38,6,0,Math.PI*1.5); ctx.stroke(); }
+function tree(t){
+  ctx.save(); ctx.translate(t.x,t.y); ctx.scale(t.s,t.s);
+  ctx.fillStyle='rgba(138,46,92,.12)'; ctx.beginPath(); ctx.ellipse(0,0,34,10,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#D9A68A'; rr(-8,-48,16,50,6); ctx.fill();
+  const sw=Math.sin(T*1.2+t.x)*1.5;
+  [[0,-95,40],[-30,-75,30],[30,-75,30],[-18,-112,26],[20,-110,26]].forEach(([x,y,r])=>{ ctx.fillStyle=t.k; ctx.beginPath(); ctx.arc(x+sw,y,r,0,Math.PI*2); ctx.fill(); });
+  ctx.fillStyle='#fff'; [[-20,-95],[12,-118],[28,-80],[-34,-70],[4,-82]].forEach(([x,y])=>{ ctx.beginPath(); ctx.arc(x+sw,y,3.5,0,Math.PI*2); ctx.fill(); });
+  ctx.restore();
+}
+function castle(){
+  const x=230, b=270;
+  ctx.fillStyle='rgba(138,46,92,.12)'; ctx.beginPath(); ctx.ellipse(x,b,140,22,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FFF0F6'; ctx.strokeStyle='#F2A6C6'; ctx.lineWidth=3;
+  rr(x-90,b-120,180,120,10); ctx.fill(); ctx.stroke();
+  [[-100,170],[100,170],[0,210]].forEach(([dx,h])=>{ rr(x+dx-24,b-h,48,h,8); ctx.fill(); ctx.stroke(); ctx.fillStyle='#FF9EC6'; ctx.beginPath(); ctx.moveTo(x+dx-32,b-h+4); ctx.lineTo(x+dx,b-h-56); ctx.lineTo(x+dx+32,b-h+4); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle='#FFF0F6';
+    ctx.fillStyle='#FFD66B'; ctx.beginPath(); ctx.moveTo(x+dx,b-h-56); ctx.lineTo(x+dx+16,b-h-48); ctx.lineTo(x+dx,b-h-42); ctx.fill(); ctx.fillStyle='#FFF0F6'; });
+  ctx.fillStyle='#CDB8FF'; ctx.beginPath(); ctx.arc(x,b-36,20,Math.PI,0); ctx.rect(x-20,b-36,40,36); ctx.fill();
+  ctx.fillStyle='#BDE8F2'; [[-100,-120],[100,-120],[0,-150],[-45,-80],[45,-80]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(x+dx,b+dy,9,Math.PI,0); ctx.rect(x+dx-9,b+dy,18,14); ctx.fill(); });
+  ctx.fillStyle='#FF7EB3'; ctx.beginPath(); const hx=x, hy=b-95; ctx.moveTo(hx,hy+8); ctx.bezierCurveTo(hx-14,hy-2,hx-6,hy-12,hx,hy-4); ctx.bezierCurveTo(hx+6,hy-12,hx+14,hy-2,hx,hy+8); ctx.fill();
+}
+function windmill(){
+  const x=1700, b=315;
+  ctx.fillStyle='rgba(138,46,92,.12)'; ctx.beginPath(); ctx.ellipse(x,b,70,16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FFF0F6'; ctx.strokeStyle='#C9A8F0'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x-50,b); ctx.lineTo(x-30,b-150); ctx.lineTo(x+30,b-150); ctx.lineTo(x+50,b); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#CDB8FF'; ctx.beginPath(); ctx.moveTo(x-40,b-148); ctx.lineTo(x,b-200); ctx.lineTo(x+40,b-148); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#FFB3D1'; ctx.beginPath(); ctx.arc(x,b-30,16,Math.PI,0); ctx.rect(x-16,b-30,32,30); ctx.fill();
+  ctx.save(); ctx.translate(x,b-150); ctx.rotate(T*0.8);
+  for(let i=0;i<4;i++){ ctx.rotate(Math.PI/2); ctx.fillStyle=i%2?'#FFFFFF':'#FFD0E4'; ctx.strokeStyle='#E87AA8'; ctx.lineWidth=2; rr(6,-12,95,24,8); ctx.fill(); ctx.stroke(); }
+  ctx.fillStyle='#FFD66B'; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill(); ctx.restore();
+}
+function fence(x1,y1,x2,y2){
+  ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=7; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.strokeStyle='#FFC6DE'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const len=Math.hypot(x2-x1,y2-y1), n=Math.floor(len/38);
+  for(let i=0;i<=n;i++){ const x=x1+(x2-x1)*i/n, y=y1+(y2-y1)*i/n; ctx.fillStyle='#FFFFFF'; rr(x-6,y-24,12,30,5); ctx.fill(); ctx.fillStyle='#FFD0E4'; ctx.beginPath(); ctx.arc(x,y-24,6,Math.PI,0); ctx.fill(); }
+}
+function arch(x,y){
+  ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=10; ctx.beginPath(); ctx.arc(x,y-10,62,Math.PI*1.05,Math.PI*1.95); ctx.stroke();
+  ['#FF9EC6','#FFE29A','#CDB8FF'].forEach((c,i)=>{ for(let k=0;k<7;k++){ const a=Math.PI*(1.1+k*0.13); ctx.fillStyle=c; ctx.beginPath(); ctx.arc(x+Math.cos(a)*62+(i-1)*4, y-10+Math.sin(a)*62, 6, 0, Math.PI*2); ctx.fill(); } });
+}
+function lock(x,y){
+  ctx.strokeStyle='#8A2E5C'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(x,y-12,12,Math.PI,0); ctx.stroke();
+  ctx.fillStyle='#FF7EB3'; rr(x-18,y-12,36,28,8); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+}
+function drawAnimal(a,r){
+  const s=SP[a.sp], sz=s.size, im=IMG[a.sp];
+  const walking = r.wait<=0;
+  const hop = r.hop>0 ? Math.sin((0.5-r.hop)/0.5*Math.PI)*14 : (walking ? Math.abs(Math.sin(r.bob*9))*3 : 0);
+  ctx.fillStyle='rgba(138,46,92,.14)'; ctx.beginPath(); ctx.ellipse(r.x,r.y,sz*0.3,sz*0.08,0,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.translate(r.x, r.y-hop); ctx.scale(r.dir<0?-1:1,1);
+  if(r.hop>0){ const q=1+Math.sin((0.5-r.hop)/0.5*Math.PI)*0.08; ctx.scale(1/q,q); }
+  if(im.complete) ctx.drawImage(im,-sz/2,-sz,sz,sz);
+  ctx.restore();
+  const nearP = Math.hypot(P.x-r.x,P.y-r.y)<140;
+  if(r.hop>0) bubble(r.x+sz*0.35, r.y-sz-hop, '♪');
+  else if(!a.voice) bubble(r.x+sz*0.35, r.y-sz+4+Math.sin(T*3)*3, '🎤');
+  if(nearP){ ctx.font='17px "ZCOOL KuaiLe","PingFang SC",sans-serif'; ctx.textAlign='center'; ctx.lineWidth=4; ctx.strokeStyle='#fff'; ctx.fillStyle='#8A2E5C'; const ny=r.y+20; ctx.strokeText(a.name,r.x,ny); ctx.fillText(a.name,r.x,ny); }
+}
+function bubble(x,y,t){
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x-8,y+10); ctx.lineTo(x-14,y+20); ctx.lineTo(x-2,y+13); ctx.fill();
+  ctx.font='17px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#D9558C'; ctx.fillText(t,x,y+1); ctx.textBaseline='alphabetic';
+}
+function princess(c,x,y,dir,wt,look){
+  const dress=DRESSES[look.dress]||DRESSES[0], hair=HAIRS[look.hair]||HAIRS[0], L='#E87AA8';
+  const step = wt ? Math.sin(wt*12) : 0, bob = wt ? Math.abs(Math.sin(wt*12))*2.5 : Math.sin(T*2)*0.8;
+  c.save(); c.translate(x,y);
+  c.fillStyle='rgba(138,46,92,.15)'; c.beginPath(); c.ellipse(0,0,20,6,0,0,Math.PI*2); c.fill();
+  c.scale(dir,1);
+  c.lineWidth=2.5; c.strokeStyle=L; c.lineJoin='round';
+  // legs & shoes
+  c.fillStyle='#FFE3D3'; c.fillRect(-7+step*3,-14,5,12); c.fillRect(2-step*3,-14,5,12);
+  c.fillStyle='#FF6F9F'; c.beginPath(); c.ellipse(-5+step*3,-2,6,3.5,0,0,Math.PI*2); c.fill(); c.beginPath(); c.ellipse(5-step*3,-2,6,3.5,0,0,Math.PI*2); c.fill();
+  c.translate(0,-bob);
+  // hair back
+  c.fillStyle=hair; c.beginPath(); c.moveTo(-17,-60); c.quadraticCurveTo(-24,-30,-15,-26); c.lineTo(15,-26); c.quadraticCurveTo(24,-30,17,-60); c.closePath(); c.fill(); c.stroke();
+  // dress
+  c.fillStyle=dress; c.beginPath(); c.moveTo(-8,-40); c.lineTo(8,-40); c.lineTo(19,-13); c.quadraticCurveTo(0,-8,-19,-13); c.closePath(); c.fill(); c.stroke();
+  c.strokeStyle='#fff'; c.lineWidth=2.5; c.beginPath(); c.moveTo(-17,-16); c.quadraticCurveTo(-12,-12,-8,-16); c.quadraticCurveTo(-4,-12,0,-16); c.quadraticCurveTo(4,-12,8,-16); c.quadraticCurveTo(12,-12,17,-16); c.stroke();
+  c.fillStyle='#fff'; c.beginPath(); c.arc(0,-36,2.5,0,Math.PI*2); c.fill();
+  c.strokeStyle=L; c.lineWidth=2.5;
+  // arms
+  c.fillStyle='#FFE3D3'; c.beginPath(); c.ellipse(-11,-30+step*1.5,3.5,7,0.3,0,Math.PI*2); c.fill(); c.beginPath(); c.ellipse(11,-30-step*1.5,3.5,7,-0.3,0,Math.PI*2); c.fill();
+  // head
+  c.fillStyle='#FFE9DD'; c.beginPath(); c.arc(0,-55,16,0,Math.PI*2); c.fill(); c.stroke();
+  // bangs
+  c.fillStyle=hair; c.beginPath(); c.moveTo(-17,-55); c.quadraticCurveTo(-16,-74,0,-73); c.quadraticCurveTo(16,-74,17,-55); c.quadraticCurveTo(10,-64,4,-60); c.quadraticCurveTo(-2,-66,-7,-60); c.quadraticCurveTo(-12,-64,-17,-55); c.closePath(); c.fill(); c.stroke();
+  // face
+  c.fillStyle='#5A2140'; c.beginPath(); c.ellipse(-5,-52,2.3,3,0,0,Math.PI*2); c.fill(); c.beginPath(); c.ellipse(6,-52,2.3,3,0,0,Math.PI*2); c.fill();
+  c.fillStyle='#fff'; c.beginPath(); c.arc(-4.3,-53.2,0.9,0,Math.PI*2); c.fill(); c.beginPath(); c.arc(6.7,-53.2,0.9,0,Math.PI*2); c.fill();
+  c.fillStyle='rgba(255,126,179,.5)'; c.beginPath(); c.ellipse(-10,-47,3,1.8,0,0,Math.PI*2); c.fill(); c.beginPath(); c.ellipse(11,-47,3,1.8,0,0,Math.PI*2); c.fill();
+  c.strokeStyle='#5A2140'; c.lineWidth=1.4; c.beginPath(); c.arc(0.5,-47,2.5,0.2,Math.PI-0.2); c.stroke();
+  // crown
+  c.fillStyle='#FFD66B'; c.strokeStyle='#E8B23A'; c.lineWidth=1.6;
+  c.beginPath(); c.moveTo(-9,-71); c.lineTo(-9,-80); c.lineTo(-4.5,-75); c.lineTo(0,-83); c.lineTo(4.5,-75); c.lineTo(9,-80); c.lineTo(9,-71); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle='#FF7EB3'; c.beginPath(); c.arc(0,-75,1.8,0,Math.PI*2); c.fill();
+  c.restore();
+}
+
+/* ================= book ================= */
+const bookEl=document.getElementById('book'), cells=document.getElementById('cells');
+let bookSel='bunny';
+function openBook(){ renderBook(); bookEl.classList.remove('hidden'); }
+function renderBook(){
+  cells.innerHTML='';
+  SPECIES.forEach(sp=>{
+    const has=owned(sp.id)>0;
+    const b=document.createElement('button'); b.className='cell'+(has?'':' sil'); b.setAttribute('aria-pressed', sp.id===bookSel);
+    b.setAttribute('aria-label', has?sp.name:'未发现的动物');
+    b.innerHTML = animalSVG(sp.id) + (has?`<span class="n">×${owned(sp.id)}</span>`:'') + (S.unlocked[sp.area]?'':'<span class="lock">🔒</span>');
+    b.onclick=()=>{ bookSel=sp.id; renderBook(); };
+    cells.appendChild(b);
+  });
+  const sp=SP[bookSel], has=owned(sp.id)>0, cost=adoptCost(sp);
+  const big=document.getElementById('bBig'); big.innerHTML=animalSVG(sp.id); big.className='big'+(has?'':' sil');
+  document.getElementById('bName').textContent = has?sp.name:'???';
+  document.getElementById('bInc').textContent = `★ +${fmt(sp.base)} / ${CRY}秒`;
+  document.getElementById('bDesc').textContent = sp.desc;
+  const req=document.getElementById('bReq'), ad=document.getElementById('bAdopt');
+  if(!S.unlocked[sp.area]){ req.textContent=`住在「${AREAS[sp.area].name}」，先去解锁那里吧`; ad.disabled=true; }
+  else { req.textContent = S.coins<cost ? `还差 ★${fmt(cost-S.coins)}` : ''; ad.disabled=S.coins<cost; }
+  ad.textContent = `领养 ★${fmt(cost)}`;
+}
+document.getElementById('bAdopt').onclick=()=>{
+  const sp=SP[bookSel], cost=adoptCost(sp);
+  if(S.coins<cost||!S.unlocked[sp.area]) return;
+  S.coins-=cost;
+  const a={uid:uid(), sp:sp.id, name:sp.name, lvl:1, pitch:sp.pitch, voice:false};
+  S.animals.push(a);
+  const r=rt(a); const ang=Math.random()*6.28; const nx=P.x+Math.cos(ang)*70, ny=P.y+Math.sin(ang)*40;
+  if(walkable(nx,ny,20)){ r.x=nx; r.y=ny; } r.tx=r.x; r.ty=r.y; r.wait=2;
+  save(); hud(); bookEl.classList.add('hidden'); openCard(a.uid, true);
+};
+document.getElementById('bookBtn').onclick=()=>{ ac(); openBook(); };
+document.getElementById('bookClose').onclick=()=>bookEl.classList.add('hidden');
+bookEl.addEventListener('click',e=>{ if(e.target===bookEl) bookEl.classList.add('hidden'); });
+
+/* ================= animal card ================= */
+const cardEl=document.getElementById('card'), cName=document.getElementById('cName'), cPitch=document.getElementById('cPitch'), cPitchOut=document.getElementById('cPitchOut');
+const recBtn=document.getElementById('recBtn'), recHint=document.getElementById('recHint'), recErr=document.getElementById('recErr'), ring=document.getElementById('ring');
+const playBtn=document.getElementById('playBtn'), upBtn=document.getElementById('upBtn');
+let cardUid=null;
+const getA=id=>S.animals.find(a=>a.uid===id);
+const pitchLabel=p=> p<0.8?'低沉':p<0.95?'稍低':p<=1.05?'原声':p<1.4?'可爱':'尖尖';
+function openCard(id, fresh){
+  const a=getA(id); if(!a) return; cardUid=id; ac();
+  document.getElementById('cHero').innerHTML=animalSVG(a.sp);
+  cName.value=a.name; cPitch.value=a.pitch; recErr.textContent='';
+  refreshCard();
+  if(fresh) recHint.textContent=`欢迎${SP[a.sp].name}！点一下给它录叫声吧`;
+  cardEl.classList.remove('hidden');
+}
+function refreshCard(){
+  const a=getA(cardUid); if(!a) return;
+  cPitchOut.textContent=pitchLabel(a.pitch); playBtn.disabled=!a.voice;
+  if(!rec) recHint.textContent = a.voice ? `每叫一声 +${fmt(income(a))}，点一下重新录` : '点一下开始录叫声（最长 3 秒）';
+  const c=upCost(a); upBtn.textContent=`升级 ★${fmt(c)}`; upBtn.disabled=S.coins<c;
+}
+cName.addEventListener('input',()=>{ const a=getA(cardUid); if(a){ a.name=cName.value.trim()||SP[a.sp].name; saveSoon(); } });
+cPitch.addEventListener('input',()=>{ const a=getA(cardUid); if(a){ a.pitch=parseFloat(cPitch.value); cPitchOut.textContent=pitchLabel(a.pitch); saveSoon(); } });
+cPitch.addEventListener('change',()=>{ const a=getA(cardUid); if(a&&a.voice) playVoice(a,true); });
+playBtn.onclick=()=>{ const a=getA(cardUid); if(a) playVoice(a,true); };
+upBtn.onclick=()=>{ const a=getA(cardUid); if(!a) return; const c=upCost(a); if(S.coins<c) return; S.coins-=c; a.lvl++; save(); hud(); refreshCard(); toast(`${a.name}升到 Lv.${a.lvl} 啦`); };
+function closeCard(){ if(rec) stopRec(); cardEl.classList.add('hidden'); cardUid=null; save(); }
+document.getElementById('cardClose').onclick=closeCard;
+cardEl.addEventListener('click',e=>{ if(e.target===cardEl) closeCard(); });
+document.getElementById('releaseBtn').onclick=()=>{
+  const a=getA(cardUid); if(!a) return;
+  if(S.animals.length<=1){ recErr.textContent='至少要留一只小动物陪公主哦'; return; }
+  if(!confirm(`确定要送${a.name}回森林吗？它的叫声录音也会删掉。`)) return;
+  S.animals=S.animals.filter(x=>x.uid!==a.uid); delVoice(a.uid); buffers.delete(a.uid); RT.delete(a.uid);
+  cardEl.classList.add('hidden'); cardUid=null; save(); hud();
+};
+
+let rec=null, recStream=null, recChunks=[], recTimer=null, recStart=0;
+recBtn.onclick=()=>{ rec?stopRec():startRec(); };
+async function startRec(){
+  recErr.textContent='';
+  if(!navigator.mediaDevices||!window.MediaRecorder){ recErr.textContent='这个浏览器不支持录音，换 Safari 或 Chrome 打开试试。'; return; }
+  try{ recStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ recErr.textContent='这里打不开麦克风。可以先用手机自带的「语音备忘录」录好，再点下面选进来。'; return; }
+  const types=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'];
+  const mt=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
+  try{ rec=mt?new MediaRecorder(recStream,{mimeType:mt}):new MediaRecorder(recStream); }
+  catch(e){ recErr.textContent='录音启动失败，请再试一次。'; recStream.getTracks().forEach(t=>t.stop()); return; }
+  recChunks=[]; const target=cardUid;
+  rec.ondataavailable=e=>{ if(e.data&&e.data.size) recChunks.push(e.data); };
+  rec.onstop=async()=>{
+    recStream.getTracks().forEach(t=>t.stop());
+    const blob=new Blob(recChunks,{type:rec.mimeType||mt||'audio/webm'});
+    rec=null; recBtn.classList.remove('on'); ring.style.strokeDashoffset=289;
+    await useVoice(target, blob);
+  };
+  rec.start(); recBtn.classList.add('on'); recStart=performance.now(); recHint.textContent='录音中…再点一下停止';
+  const tick=()=>{ if(!rec) return; const p=Math.min(1,(performance.now()-recStart)/3000); ring.style.strokeDashoffset=289*(1-p); requestAnimationFrame(tick); }; tick();
+  recTimer=setTimeout(stopRec,3000);
+}
+function stopRec(){ clearTimeout(recTimer); if(rec&&rec.state!=='inactive') rec.stop(); }
+async function useVoice(target, blob){
+  const a=getA(target); if(!a) return;
+  if(!blob || blob.size<500){ recErr.textContent='好像没录到声音，再试一次吧'; refreshCard(); return; }
+  await putVoice(a.uid,blob); buffers.delete(a.uid);
+  if(!await loadBuffer(a)){ recErr.textContent='这段录音播放不了，换一段试试'; refreshCard(); return; }
+  recErr.textContent='';
+  const first=!a.voice; a.voice=true; save(); hud(); refreshCard(); playVoice(a,true);
+  rt(a).next=performance.now()+3000;
+  if(cardUid===a.uid) recHint.textContent = first ? `${a.name}学会叫啦！以后它会自己叫着赚钱` : '新叫声换好啦';
+}
+const importIn=document.getElementById('importIn');
+document.getElementById('importBtn').onclick=()=>{ ac(); importIn.value=''; importIn.click(); };
+importIn.onchange=async()=>{ const f=importIn.files&&importIn.files[0]; if(f&&cardUid) await useVoice(cardUid,f); };
+
+/* ================= wardrobe ================= */
+const wardEl=document.getElementById('ward'), wc=document.getElementById('wardCvs').getContext('2d');
+function drawWard(){ wc.setTransform(1,0,0,1,0,0); wc.clearRect(0,0,240,300); wc.setTransform(2.6,0,0,2.6,120,270); princess(wc,0,0,1,0,S.look); }
+function swatches(el, list, key){
+  el.innerHTML='';
+  list.forEach((c,i)=>{ const b=document.createElement('button'); b.className='sw'; b.style.background=c; b.setAttribute('aria-pressed', S.look[key]===i); b.setAttribute('aria-label','颜色 '+(i+1));
+    b.onclick=()=>{ S.look[key]=i; save(); swatches(el,list,key); drawWard(); }; el.appendChild(b); });
+}
+document.getElementById('wardBtn').onclick=()=>{ swatches(document.getElementById('dressSw'),DRESSES,'dress'); swatches(document.getElementById('hairSw'),HAIRS,'hair'); drawWard(); wardEl.classList.remove('hidden'); };
+document.getElementById('wardClose').onclick=()=>wardEl.classList.add('hidden');
+wardEl.addEventListener('click',e=>{ if(e.target===wardEl) wardEl.classList.add('hidden'); });
+
+/* ================= settings / mute ================= */
+const setEl=document.getElementById('settings'), muteBtn=document.getElementById('muteBtn');
+function syncMute(){ muteBtn.textContent=S.muted?'🔇':'🔊'; muteBtn.setAttribute('aria-label',S.muted?'打开声音':'静音'); }
+muteBtn.onclick=()=>{ S.muted=!S.muted; syncMute(); save(); ac(); };
+document.getElementById('setBtn').onclick=()=>setEl.classList.remove('hidden');
+document.getElementById('setClose').onclick=()=>setEl.classList.add('hidden');
+setEl.addEventListener('click',e=>{ if(e.target===setEl) setEl.classList.add('hidden'); });
+document.getElementById('resetBtn').onclick=async()=>{
+  if(!confirm('确定清空所有存档和录音吗？')) return;
+  for(const a of S.animals) await delVoice(a.uid);
+  try{ localStorage.removeItem(KEY); localStorage.removeItem('pvz_state_v1'); }catch(e){}
+  location.reload();
+};
+
+/* ================= start / offline ================= */
+(function offline(){
+  const secs=Math.min(4*3600, Math.max(0,(Date.now()-(S.last||Date.now()))/1000));
+  const earned=Math.floor(rate()/60*secs*0.5);
+  if(secs>60 && earned>0){
+    S.coins+=earned; const m=Math.round(secs/60);
+    document.getElementById('startText').innerHTML=`你不在的 ${m>=60?Math.floor(m/60)+' 小时 ':''}${m%60} 分钟里，小动物们一直在叫，帮你赚了 ★${fmt(earned)}！`;
+  }
+})();
+document.getElementById('startBtn').onclick=()=>{ ac(); document.getElementById('start').classList.add('hidden'); toast(AREAS[curArea].name); if(!S.animals.some(a=>a.voice)) setTimeout(()=>toast('点一下带 🎤 的小动物，给它录叫声', 3500), 2400); };
+
+setInterval(()=>{ S.p={x:Math.round(P.x), y:Math.round(P.y)}; save(); }, 1000);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden){ S.p={x:Math.round(P.x),y:Math.round(P.y)}; save(); } });
+addEventListener('pagehide',()=>{ S.p={x:Math.round(P.x),y:Math.round(P.y)}; save(); });
+document.addEventListener('pointerdown',()=>{ if(AC&&AC.state==='suspended') AC.resume(); },{passive:true});
+
+try{ if(localStorage.getItem('pve_portrait_ok')) document.body.classList.add('portrait-ok'); }catch(e){}
+document.getElementById('portraitOk').onclick=()=>{ document.body.classList.add('portrait-ok'); try{ localStorage.setItem('pve_portrait_ok','1'); }catch(e){} };
+syncMute(); hud();
+requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>
