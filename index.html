@@ -139,6 +139,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--pink); outline-
 
 <div class="tools left">
   <button class="tool" id="muteBtn" aria-label="静音">🔊</button>
+  <button class="tool" id="bgmBtn" aria-label="背景音乐">🎵</button>
   <button class="tool" id="wardBtn" aria-label="公主衣柜">👗</button>
 </div>
 <div class="tools">
@@ -378,8 +379,21 @@ const endJoy = e=>{
 cvs.addEventListener('pointerup', endJoy); cvs.addEventListener('pointercancel', endJoy);
 
 /* ================= audio ================= */
-let AC=null; const buffers=new Map(); let playing=0;
-function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(AC.state==='suspended') AC.resume(); return AC; }
+let AC=null; const buffers=new Map(); let playing=0, master=null, bgmBus=null;
+// iOS: keep the audio session in 'playback' so sounds play through the speaker even on silent mode
+function setSession(t){ try{ if(navigator.audioSession && navigator.audioSession.type!==t) navigator.audioSession.type=t; }catch(e){} }
+setSession('playback');
+function ac(){
+  if(!AC){
+    try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+    master=AC.createGain(); master.gain.value=1; master.connect(AC.destination);
+    bgmBus=AC.createGain(); bgmBus.gain.value=0; bgmBus.connect(master);
+    AC.onstatechange=()=>{ if(AC.state!=='running' && !document.hidden) AC.resume().catch(()=>{}); };
+  }
+  if(AC.state!=='running') AC.resume().catch(()=>{});
+  return AC;
+}
+function unlockAudio(){ const c=ac(); if(!c) return; try{ const b=c.createBuffer(1,1,22050), s=c.createBufferSource(); s.buffer=b; s.connect(c.destination); s.start(0); }catch(e){} }
 let dbP=null;
 function db(){ if(!dbP) dbP=new Promise((res,rej)=>{ try{ const r=indexedDB.open('pvz_voices',1); r.onupgradeneeded=()=>r.result.createObjectStore('v'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }); return dbP; }
 async function putVoice(id,blob){ try{ const d=await db(); await new Promise((res,rej)=>{ const tx=d.transaction('v','readwrite'); tx.objectStore('v').put(blob,id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){} }
@@ -402,10 +416,56 @@ async function playVoice(a, force, vol=1){
   if(S.muted && !force) return;
   if(!force && playing>=3) return;
   const buf=await loadBuffer(a); const c=ac(); if(!buf||!c) return;
+  if(c.state!=='running'){ try{ await c.resume(); }catch(e){} }
   const src=c.createBufferSource(); src.buffer=buf; src.playbackRate.value=a.pitch;
-  const g=c.createGain(); g.gain.value=0.95*vol; src.connect(g).connect(c.destination);
-  playing++; src.onended=()=>playing--; src.start();
+  const g=c.createGain(); g.gain.value=1.0*vol; src.connect(g).connect(master);
+  const dur=buf.duration/a.pitch;
+  // never let a stuck sound block later cries
+  playing++; let done=false; const fin=()=>{ if(!done){ done=true; playing=Math.max(0,playing-1); } };
+  src.onended=fin; setTimeout(fin, dur*1000+400);
+  duck(dur);
+  src.start();
 }
+
+/* ================= bgm (original music-box waltz) ================= */
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+const MEL=[[72,1],[76,1],[79,1],[81,2],[79,1],[77,1],[76,1],[74,1],[72,3],
+ [74,1],[76,1],[77,1],[79,2],[76,1],[74,1],[72,1],[74,1],[76,3],
+ [72,1],[76,1],[79,1],[84,2],[81,1],[79,1],[77,1],[76,1],[74,3],
+ [77,1],[76,1],[74,1],[72,1],[74,1],[76,1],[74,2],[71,1],[72,3]];
+const CH={C:[48,60,64,67],F:[53,60,65,69],G:[55,59,62,67]};
+const BARS=['C','F','G','C','G','C','G','C','C','F','C','G','F','C','G','C'];
+const BEAT=60/92, LOOP=48, BGM_VOL=0.5;
+const EVENTS=[];
+(()=>{ let t=0; for(const [m,d] of MEL){ EVENTS.push({t,m,d,k:'mel'}); t+=d; }
+  BARS.forEach((c,i)=>{ const n=CH[c]; EVENTS.push({t:i*3,m:n[0],d:2.5,k:'bass'},{t:i*3+1,m:n[1],d:.8,k:'ch'},{t:i*3+1,m:n[2],d:.8,k:'ch'},{t:i*3+2,m:n[2],d:.8,k:'ch'},{t:i*3+2,m:n[3],d:.8,k:'ch'}); });
+  EVENTS.sort((a,b)=>a.t-b.t); })();
+let bgmOn = S.bgm!==false, t0=0, loopN=0, evI=0;
+function note(c,time,e){
+  const f=mtof(e.m), out=c.createGain(); out.connect(bgmBus);
+  const peak = e.k==='mel'?0.3 : e.k==='bass'?0.2 : 0.07;
+  const len = e.k==='mel'? Math.max(0.9,e.d*BEAT*1.3) : e.d*BEAT;
+  out.gain.setValueAtTime(0.0001,time); out.gain.exponentialRampToValueAtTime(peak,time+0.012); out.gain.exponentialRampToValueAtTime(0.0001,time+len);
+  const o=c.createOscillator(); o.type=e.k==='bass'?'triangle':'sine'; o.frequency.value=f; o.connect(out); o.start(time); o.stop(time+len+0.05);
+  if(e.k==='mel'){ const o2=c.createOscillator(), g2=c.createGain(); g2.gain.value=0.3; o2.type='sine'; o2.frequency.value=f*2; o2.connect(g2).connect(out); o2.start(time); o2.stop(time+len+0.05); }
+}
+function bgmTick(){
+  const c=AC; if(!c || c.state!=='running' || !bgmOn || document.hidden) return;
+  if(!t0){ t0=c.currentTime+0.15; loopN=0; evI=0; }
+  const horizon=c.currentTime+0.4;
+  for(let guard=0; guard<200; guard++){
+    const e=EVENTS[evI], time=t0+(loopN*LOOP+e.t)*BEAT;
+    if(time>horizon) break;
+    if(time<c.currentTime-1){ t0=0; return; }
+    if(time>c.currentTime-0.05) note(c,time,e);
+    evI++; if(evI>=EVENTS.length){ evI=0; loopN++; }
+  }
+}
+setInterval(bgmTick,120);
+function duck(d){ if(!bgmBus||!bgmOn||!AC) return; const n=AC.currentTime; bgmBus.gain.cancelScheduledValues(n); bgmBus.gain.setTargetAtTime(BGM_VOL*0.3,n,0.05); bgmBus.gain.setTargetAtTime(BGM_VOL,n+d+0.2,0.4); }
+function syncBgm(){ const b=document.getElementById('bgmBtn'); b.style.opacity=bgmOn?1:.45; b.setAttribute('aria-label', bgmOn?'关掉背景音乐':'打开背景音乐'); }
+function setBgm(on){ bgmOn=on; S.bgm=on; syncBgm(); const c=ac(); if(!c) return; bgmBus.gain.cancelScheduledValues(c.currentTime); bgmBus.gain.setTargetAtTime(on?BGM_VOL:0, c.currentTime, 0.3); if(on) t0=0; save(); }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ setSession('playback'); ac(); t0=0; } });
 
 /* ================= HUD ================= */
 const coinEl=document.getElementById('coinEl'), rateEl=document.getElementById('rateEl'), toastEl=document.getElementById('toast');
@@ -752,8 +812,9 @@ recBtn.onclick=()=>{ rec?stopRec():startRec(); };
 async function startRec(){
   recErr.textContent='';
   if(!navigator.mediaDevices||!window.MediaRecorder){ recErr.textContent='这个浏览器不支持录音，换 Safari 或 Chrome 打开试试。'; return; }
+  setSession('play-and-record');
   try{ recStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(e){ recErr.textContent='这里打不开麦克风。可以先用手机自带的「语音备忘录」录好，再点下面选进来。'; return; }
+  catch(e){ recErr.textContent='这里打不开麦克风。可以先用手机自带的「语音备忘录」录好，再点下面选进来。'; setSession('playback'); return; }
   const types=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'];
   const mt=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
   try{ rec=mt?new MediaRecorder(recStream,{mimeType:mt}):new MediaRecorder(recStream); }
@@ -762,6 +823,7 @@ async function startRec(){
   rec.ondataavailable=e=>{ if(e.data&&e.data.size) recChunks.push(e.data); };
   rec.onstop=async()=>{
     recStream.getTracks().forEach(t=>t.stop());
+    setSession('playback'); ac(); t0=0;
     const blob=new Blob(recChunks,{type:rec.mimeType||mt||'audio/webm'});
     rec=null; recBtn.classList.remove('on'); ring.style.strokeDashoffset=289;
     await useVoice(target, blob);
@@ -820,7 +882,8 @@ document.getElementById('resetBtn').onclick=async()=>{
     document.getElementById('startText').innerHTML=`你不在的 ${m>=60?Math.floor(m/60)+' 小时 ':''}${m%60} 分钟里，小动物们一直在叫，帮你赚了 ★${fmt(earned)}！`;
   }
 })();
-document.getElementById('startBtn').onclick=()=>{ ac(); document.getElementById('start').classList.add('hidden'); toast(AREAS[curArea].name); if(!S.animals.some(a=>a.voice)) setTimeout(()=>toast('点一下带 🎤 的小动物，给它录叫声', 3500), 2400); };
+document.getElementById('bgmBtn').onclick=()=>{ unlockAudio(); setBgm(!bgmOn); };
+document.getElementById('startBtn').onclick=()=>{ unlockAudio(); setBgm(bgmOn); document.getElementById('start').classList.add('hidden'); toast(AREAS[curArea].name); if(!S.animals.some(a=>a.voice)) setTimeout(()=>toast('点一下带 🎤 的小动物，给它录叫声', 3500), 2400); };
 
 setInterval(()=>{ S.p={x:Math.round(P.x), y:Math.round(P.y)}; save(); }, 1000);
 document.addEventListener('visibilitychange',()=>{ if(document.hidden){ S.p={x:Math.round(P.x),y:Math.round(P.y)}; save(); } });
@@ -829,7 +892,7 @@ document.addEventListener('pointerdown',()=>{ if(AC&&AC.state==='suspended') AC.
 
 try{ if(localStorage.getItem('pve_portrait_ok')) document.body.classList.add('portrait-ok'); }catch(e){}
 document.getElementById('portraitOk').onclick=()=>{ document.body.classList.add('portrait-ok'); try{ localStorage.setItem('pve_portrait_ok','1'); }catch(e){} };
-syncMute(); hud();
+syncMute(); syncBgm(); hud();
 requestAnimationFrame(step);
 })();
 </script>
