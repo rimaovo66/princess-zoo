@@ -209,6 +209,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--pink); outline-
     <h2>设置</h2>
     <p>拖动屏幕任意位置移动公主，电脑上也可以用方向键或 WASD。点小动物可以改名字、录叫声、升级。</p>
     <p>录音只保存在这台设备上。</p>
+    <div class="field"><label for="vvol">叫声音量</label><input type="range" id="vvol" min="0.5" max="3" step="0.1"><output id="vvolOut"></output></div>
     <button class="btn ghost" id="resetBtn">清空存档，重新开始</button>
   </div>
 </div>
@@ -379,7 +380,7 @@ const endJoy = e=>{
 cvs.addEventListener('pointerup', endJoy); cvs.addEventListener('pointercancel', endJoy);
 
 /* ================= audio ================= */
-let AC=null; const buffers=new Map(); let playing=0, master=null, bgmBus=null;
+let AC=null; const buffers=new Map(); let playing=0, master=null, bgmBus=null, voiceBus=null;
 // iOS: keep the audio session in 'playback' so sounds play through the speaker even on silent mode
 function setSession(t){ try{ if(navigator.audioSession && navigator.audioSession.type!==t) navigator.audioSession.type=t; }catch(e){} }
 setSession('playback');
@@ -388,6 +389,9 @@ function ac(){
     try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
     master=AC.createGain(); master.gain.value=1; master.connect(AC.destination);
     bgmBus=AC.createGain(); bgmBus.gain.value=0; bgmBus.connect(master);
+    voiceBus=AC.createGain(); voiceBus.gain.value=S.vvol||1.6;
+    const comp=AC.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=10; comp.ratio.value=6; comp.attack.value=0.003; comp.release.value=0.2;
+    voiceBus.connect(comp).connect(master);
     AC.onstatechange=()=>{ if(AC.state!=='running' && !document.hidden) AC.resume().catch(()=>{}); };
   }
   if(AC.state!=='running') AC.resume().catch(()=>{});
@@ -409,6 +413,9 @@ async function loadBuffer(a){
       for(let ch=0; ch<buf.numberOfChannels; ch++) cut.getChannelData(ch).set(buf.getChannelData(ch).subarray(0,n));
       buf=cut;
     }
+    // normalise every clip so quiet phone recordings come out loud and even
+    let peak=0; for(let ch=0; ch<buf.numberOfChannels; ch++){ const d=buf.getChannelData(ch); for(let i=0;i<d.length;i++){ const v=Math.abs(d[i]); if(v>peak) peak=v; } }
+    if(peak>0.001){ const k=Math.min(0.95/peak, 25); for(let ch=0; ch<buf.numberOfChannels; ch++){ const d=buf.getChannelData(ch); for(let i=0;i<d.length;i++) d[i]*=k; } }
     buffers.set(a.uid,buf); return buf;
   }catch(e){ return null; }
 }
@@ -418,7 +425,7 @@ async function playVoice(a, force, vol=1){
   const buf=await loadBuffer(a); const c=ac(); if(!buf||!c) return;
   if(c.state!=='running'){ try{ await c.resume(); }catch(e){} }
   const src=c.createBufferSource(); src.buffer=buf; src.playbackRate.value=a.pitch;
-  const g=c.createGain(); g.gain.value=1.0*vol; src.connect(g).connect(master);
+  const g=c.createGain(); g.gain.value=1.0*vol; src.connect(g).connect(voiceBus);
   const dur=buf.duration/a.pitch;
   // never let a stuck sound block later cries
   playing++; let done=false; const fin=()=>{ if(!done){ done=true; playing=Math.max(0,playing-1); } };
@@ -435,7 +442,7 @@ const MEL=[[72,1],[76,1],[79,1],[81,2],[79,1],[77,1],[76,1],[74,1],[72,3],
  [77,1],[76,1],[74,1],[72,1],[74,1],[76,1],[74,2],[71,1],[72,3]];
 const CH={C:[48,60,64,67],F:[53,60,65,69],G:[55,59,62,67]};
 const BARS=['C','F','G','C','G','C','G','C','C','F','C','G','F','C','G','C'];
-const BEAT=60/92, LOOP=48, BGM_VOL=0.5;
+const BEAT=60/92, LOOP=48, BGM_VOL=0.32;
 const EVENTS=[];
 (()=>{ let t=0; for(const [m,d] of MEL){ EVENTS.push({t,m,d,k:'mel'}); t+=d; }
   BARS.forEach((c,i)=>{ const n=CH[c]; EVENTS.push({t:i*3,m:n[0],d:2.5,k:'bass'},{t:i*3+1,m:n[1],d:.8,k:'ch'},{t:i*3+1,m:n[2],d:.8,k:'ch'},{t:i*3+2,m:n[2],d:.8,k:'ch'},{t:i*3+2,m:n[3],d:.8,k:'ch'}); });
@@ -539,7 +546,7 @@ function cry(a,r){
   floats.push({x:r.x, y:r.y-SP[a.sp].size-6, txt:'+'+fmt(e), t:0});
   // louder when the princess is close
   const d=Math.hypot(P.x-r.x,P.y-r.y);
-  playVoice(a,false, Math.max(0.25, 1-d/900));
+  playVoice(a,false, Math.max(0.65, 1-d/1400));
   hud(); saveSoon();
   if(cardUid===a.uid) refreshCard();
 }
@@ -892,6 +899,10 @@ document.addEventListener('pointerdown',()=>{ if(AC&&AC.state==='suspended') AC.
 
 try{ if(localStorage.getItem('pve_portrait_ok')) document.body.classList.add('portrait-ok'); }catch(e){}
 document.getElementById('portraitOk').onclick=()=>{ document.body.classList.add('portrait-ok'); try{ localStorage.setItem('pve_portrait_ok','1'); }catch(e){} };
+const vv=document.getElementById('vvol'), vvo=document.getElementById('vvolOut');
+vv.value=S.vvol||1.6; vvo.textContent=Math.round(vv.value*100)+'%';
+vv.oninput=()=>{ S.vvol=parseFloat(vv.value); vvo.textContent=Math.round(S.vvol*100)+'%'; if(voiceBus) voiceBus.gain.value=S.vvol; saveSoon(); };
+vv.onchange=()=>{ const a=S.animals.find(x=>x.voice); if(a) playVoice(a,true); };
 syncMute(); syncBgm(); hud();
 requestAnimationFrame(step);
 })();
