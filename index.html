@@ -293,6 +293,8 @@ if(!S){
   if(!S.animals.length) S.animals.push({uid:uid(), sp:'bunny', name:'糯米', lvl:1, pitch:SP.bunny.pitch, voice:false});
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
+// default to the original recorded voice (no pitch shift); runs once for existing saves
+if(!S.origVoice){ S.animals.forEach(a=>a.pitch=1); S.origVoice=true; }
 let saveT=null;
 function saveSoon(){ if(saveT) return; saveT=setTimeout(()=>{ saveT=null; if(typeof P!=='undefined') S.p={x:Math.round(P.x),y:Math.round(P.y)}; save(); }, 300); }
 function save(){ S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify({...S, animals:S.animals.map(({uid,sp,name,lvl,pitch,voice})=>({uid,sp,name,lvl,pitch,voice}))})); }catch(e){} }
@@ -767,7 +769,7 @@ document.getElementById('bAdopt').onclick=()=>{
   const sp=SP[bookSel], cost=adoptCost(sp);
   if(S.coins<cost||!S.unlocked[sp.area]) return;
   S.coins-=cost;
-  const a={uid:uid(), sp:sp.id, name:sp.name, lvl:1, pitch:sp.pitch, voice:false};
+  const a={uid:uid(), sp:sp.id, name:sp.name, lvl:1, pitch:1, voice:false};
   S.animals.push(a);
   const r=rt(a); const ang=Math.random()*6.28; const nx=P.x+Math.cos(ang)*70, ny=P.y+Math.sin(ang)*40;
   if(walkable(nx,ny,20)){ r.x=nx; r.y=ny; } r.tx=r.x; r.ty=r.y; r.wait=2;
