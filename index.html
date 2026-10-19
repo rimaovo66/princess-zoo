@@ -55,7 +55,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--pink); outline-
 .task .claim:disabled{background:#E7B9CD; box-shadow:0 3px 0 #C996AD;}
 .mood{font-size:15px; color:var(--muted); margin:2px 0;}
 .ver{font-size:12px !important; opacity:.7;}
-body.in-mine .rate, body.in-mine .inv, body.in-mine .tools:not(.left), body.in-mine #wardBtn, body.in-mine #taskBtn, body.in-mine .act, body.in-mine .unlock{display:none !important;}
+body.in-mine .rate, body.in-mine .inv, body.in-mine .tools:not(.left), body.in-mine #wardBtn, body.in-mine #taskBtn, body.in-mine #actBtn, body.in-mine .unlock{display:none !important;}
 body.in-mine{background:#3B2346;}
 #mineHud{display:none;} body.in-mine #mineHud{display:block;}
 .mstat{position:fixed; left:calc(12px + env(safe-area-inset-left,0px)); top:calc(12px + env(safe-area-inset-top,0px)); background:rgba(255,255,255,.92); color:#8A2E5C; border:3px solid #fff; border-radius:16px; padding:4px 12px; display:flex; align-items:center; gap:8px; font-size:16px; box-shadow:0 3px 0 #C9A8F0; pointer-events:none;}
@@ -79,6 +79,13 @@ body.in-mine{background:#3B2346;}
 .mini:disabled{background:#E7B9CD; box-shadow:0 3px 0 #C996AD;}
 .sec{font-size:18px; color:var(--pink); margin:12px 0 2px; text-align:left;}
 .faint h2{color:#8E72E0;}
+.field select{flex:1; min-width:0; font:inherit; font-size:17px; color:var(--ink); background:var(--paper2); border:3px solid var(--line); border-radius:14px; padding:6px 8px;}
+.pair{display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0;}
+.slot{width:86px; height:86px; border:3px dashed var(--line); border-radius:18px; background:var(--paper2); display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted);}
+.slot svg{width:100%; height:100%;}
+.pair .heart{font-size:28px;}
+#loveCells{max-height:38vh; overflow-y:auto; padding:4px;}
+#loveCells .cell .n{left:2px; right:2px; text-align:center; bottom:0; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
 /* overlays */
 .scrim{position:fixed; inset:0; background:rgba(120,40,90,.3); display:flex; align-items:center; justify-content:center; padding:max(10px,env(safe-area-inset-top,0px)) 10px max(10px,env(safe-area-inset-bottom,0px)); z-index:20;}
@@ -193,6 +200,7 @@ body.in-mine{background:#3B2346;}
     <h1>公主的声音庄园</h1>
     <p id="startText">拖动屏幕带公主在庄园里散步。<br>领养小动物，亲自给它们录叫声，它们每叫一声都会帮你赚星星币。</p>
     <button class="btn" id="startBtn">进入庄园</button>
+    <p class="ver">v10 · 新动物、伙伴和宝宝</p>
   </div>
 </div>
 
@@ -247,10 +255,12 @@ body.in-mine{background:#3B2346;}
 <div id="mineHud">
   <div class="mstat"><span id="mHearts"></span><span class="ebar"><i id="mE"></i></span><span id="mEtxt"></span></div>
   <div class="mfloor" id="mFloor">第 1 层</div>
+  <button class="act hidden" id="mAct"></button>
   <button class="tool mexit" id="mExit" aria-label="回庄园">🏠</button>
   <div class="mbtns">
     <button class="tool" id="mEat" aria-label="吃草莓补体力">🍓<small id="mBerry">0</small></button>
     <button class="tool" id="mJelly" aria-label="吃果冻糖回一颗心">🍬<small id="mJ">0</small></button>
+    <button class="tool" id="mBomb" aria-label="放糖果炸弹">💣<small id="mB">0</small></button>
     <button class="hammer" id="mHammer" aria-label="敲">🔨</button>
   </div>
 </div>
@@ -260,8 +270,10 @@ body.in-mine{background:#3B2346;}
   <div class="panel">
     <button class="x" id="caveClose" aria-label="关闭">✕</button>
     <h2>闪闪水晶洞</h2>
-    <p>敲碎石头收集宝石，找到梯子 🪜 就能往下走，越深宝石越珍贵。小心果冻怪！每到第 5、10、15… 层会记录下来，下次可以直接从那里出发。</p>
+    <p>敲碎石头收集宝石，找到梯子 🪜 就能往下走。越深宝石越珍贵，怪也越多，每 10 层有果冻王。到达第 6、11、16… 层会记录下来，下次可以直接从那里出发。</p>
     <p id="caveE"></p>
+    <div class="field"><label for="compSel">带谁去</label><select id="compSel"></select></div>
+    <p class="mood" id="compInfo"></p>
     <div class="floors" id="caveFloors"></div>
   </div>
 </div>
@@ -282,6 +294,19 @@ body.in-mine{background:#3B2346;}
     <button class="x" id="bagClose" aria-label="关闭">✕</button>
     <h2>背包</h2>
     <div id="bagBody"></div>
+  </div>
+</div>
+
+<!-- love house -->
+<div class="scrim hidden" id="love">
+  <div class="panel wide">
+    <button class="x" id="loveClose" aria-label="关闭">✕</button>
+    <h2>爱心小屋</h2>
+    <p>选两只会叫的小动物，它们会生一只宝宝。宝宝长得像爸爸妈妈，叫声是用爸爸妈妈的录音混出来的。</p>
+    <div class="pair"><div class="slot" id="slotA"></div><span class="heart">💞</span><div class="slot" id="slotB"></div></div>
+    <div class="cells" id="loveCells"></div>
+    <p class="err" id="loveMsg"></p>
+    <button class="btn" id="breedBtn">生宝宝</button>
   </div>
 </div>
 
@@ -312,8 +337,12 @@ body.in-mine{background:#3B2346;}
     <p>拖动屏幕任意位置移动公主，电脑上也可以用方向键或 WASD。点小动物可以改名字、录叫声、升级。走到动物身边可以摸摸它，或者送它想要的草莓和小花，心情好的动物赚得更多。</p>
     <p>录音只保存在这台设备上。</p>
     <div class="field"><label for="vvol">叫声音量</label><input type="range" id="vvol" min="0.5" max="3" step="0.1"><output id="vvolOut"></output></div>
-    <p>花园左下角有<b>水晶洞</b>可以探险，城堡门口是<b>工坊</b>，用宝石升级装备。</p>
-    <p class="ver">版本 v9 · 水晶洞探险</p>
+    <p>花园左下角有<b>水晶洞</b>可以探险，城堡门口是<b>工坊</b>，用宝石升级装备；城堡右边的<b>爱心小屋</b>可以让两只动物生宝宝。</p>
+    <p>换手机、删主屏幕图标之前，先导出存档保存到「文件」，录音也会一起带上。</p>
+    <div class="row"><button class="btn" id="exportBtn">导出存档</button><button class="btn lav" id="importBtn2">导入存档</button></div>
+    <input type="file" id="importSave" accept=".json,application/json,text/plain" hidden>
+    <p class="err" id="saveMsg"></p>
+    <p class="ver">版本 v10 · 新动物、伙伴和宝宝</p>
     <button class="btn ghost" id="resetBtn">清空存档，重新开始</button>
   </div>
 </div>
@@ -328,23 +357,36 @@ const AREAS = {
 };
 const WW = 2000, WH = 1300;
 const SPECIES = [
-  {id:'bunny',  name:'小兔',   area:'garden', price:0,      base:1,    pitch:1.25, size:78, color:'#FFFFFF', inner:'#FFC2DA', ears:'long', acc:'bow', desc:'耳朵比身体还长，最爱偷吃草莓。'},
-  {id:'cat',    name:'小猫',   area:'garden', price:40,     base:2,    pitch:1.3,  size:78, color:'#FFE1C2', inner:'#FFB98A', ears:'tri', acc:'crown', whisk:true, desc:'每天睡十八个小时，醒着的时候在照镜子。'},
-  {id:'pig',    name:'小猪',   area:'garden', price:150,    base:5,    pitch:0.95, size:80, color:'#FFC9DD', inner:'#FF9EC4', ears:'small', acc:'bow', snout:true, desc:'粉粉的鼻子一拱一拱，闻到蛋糕就跑过来。'},
-  {id:'sheep',  name:'小羊',   area:'garden', price:400,    base:11,   pitch:1.1,  size:82, color:'#FFF6FA', inner:'#F7D3E4', ears:'side', acc:'crown', fluff:true, desc:'毛太蓬了，下雨天会变成一朵大云。'},
-  {id:'deer',   name:'小鹿',   area:'hill',   price:1200,   base:30,   pitch:1.05, size:88, color:'#E9C29E', inner:'#FFE9D6', ears:'side', acc:'bow', antler:true, spots:true, desc:'角上挂着小蝴蝶结，走路一蹦一跳。'},
-  {id:'bear',   name:'小熊',   area:'hill',   price:3000,   base:70,   pitch:0.7,  size:96, color:'#E8C3A8', inner:'#F7DCC8', ears:'round', acc:'bow', muzzle:true, desc:'个子最大，胆子最小，最怕蜜蜂。'},
-  {id:'fox',    name:'小狐狸', area:'hill',   price:7000,   base:160,  pitch:1.15, size:84, color:'#FFB27A', inner:'#FFFFFF', ears:'tall', acc:'crown', cheeks:true, desc:'表情很高冷，其实特别想被摸头。'},
-  {id:'duck',   name:'小鸭',   area:'lake',   price:18000,  base:350,  pitch:1.5,  size:76, color:'#FFF3A8', inner:'#FFB25C', ears:'none', acc:'bow', beak:true, tuft:true, desc:'在糖果湖里划水，嘎嘎声全庄园都听得见。'},
-  {id:'penguin',name:'企鹅',   area:'lake',   price:40000,  base:800,  pitch:1.4,  size:82, color:'#7D86C9', inner:'#FFFFFF', ears:'none', acc:'crown', beak:true, patch:true, desc:'穿着燕尾服，坚持认为自己是王子。'},
-  {id:'unicorn',name:'独角兽', area:'lake',   price:120000, base:2000, pitch:1.6,  size:96, color:'#FFFFFF', inner:'#FFC2DA', ears:'tri', acc:'none', horn:true, mane:true, desc:'传说只有声音最可爱的公主才能领养它。'},
+  {id:'bunny',  name:'小兔',   short:'兔', area:'garden', price:0,      base:1,    size:78, color:'#FFFFFF', inner:'#FFC2DA', ears:'long', acc:'bow', desc:'耳朵比身体还长，最爱偷吃草莓。'},
+  {id:'chick',  name:'小鸡',   short:'鸡', area:'garden', price:25,     base:1,    size:66, color:'#FFF1A8', inner:'#FFB25C', ears:'none', acc:'bow', beak:true, tuft:true, desc:'叽叽叽叫个不停，最喜欢跟在公主后面。'},
+  {id:'cat',    name:'小猫',   short:'猫', area:'garden', price:40,     base:2,    size:78, color:'#FFE1C2', inner:'#FFB98A', ears:'tri', acc:'crown', whisk:true, desc:'每天睡十八个小时，醒着的时候在照镜子。'},
+  {id:'puppy',  name:'小狗',   short:'狗', area:'garden', price:90,     base:3,    size:80, color:'#FFEBD8', inner:'#E8B48F', ears:'flop', acc:'crown', muzzle:true, tongue:true, eyePatch:true, desc:'听到名字就汪汪汪地跑过来，尾巴摇成小螺旋桨。'},
+  {id:'pig',    name:'小猪',   short:'猪', area:'garden', price:150,    base:5,    size:80, color:'#FFC9DD', inner:'#FF9EC4', ears:'small', acc:'bow', snout:true, desc:'粉粉的鼻子一拱一拱，闻到蛋糕就跑过来。'},
+  {id:'sheep',  name:'小羊',   short:'羊', area:'garden', price:400,    base:11,   size:82, color:'#FFF6FA', inner:'#F7D3E4', ears:'side', acc:'crown', fluff:true, desc:'毛太蓬了，下雨天会变成一朵大云。'},
+  {id:'cow',    name:'奶牛',   short:'牛', area:'hill',   price:900,    base:24,   size:90, color:'#FFFFFF', inner:'#FFC9DD', ears:'side', acc:'bow', snout:true, horns:true, cowSpots:true, desc:'哞～的一声能传遍整座山丘，挤出来的是草莓牛奶。'},
+  {id:'deer',   name:'小鹿',   short:'鹿', area:'hill',   price:1200,   base:30,   size:88, color:'#E9C29E', inner:'#FFE9D6', ears:'side', acc:'bow', antler:true, spots:true, desc:'角上挂着小蝴蝶结，走路一蹦一跳。'},
+  {id:'horse',  name:'小马',   short:'马', area:'hill',   price:2000,   base:48,   size:92, color:'#E7B98F', inner:'#F7DCC8', ears:'small', acc:'crown', muzzle:true, maneC:['#9A6248','#B87A5C','#9A6248','#B87A5C'], desc:'梦想是当公主的坐骑，每天都在练习优雅地小跑。'},
+  {id:'bear',   name:'小熊',   short:'熊', area:'hill',   price:3000,   base:70,   size:96, color:'#E8C3A8', inner:'#F7DCC8', ears:'round', acc:'bow', muzzle:true, desc:'个子最大，胆子最小，最怕蜜蜂。'},
+  {id:'fox',    name:'小狐狸', short:'狐', area:'hill',   price:7000,   base:160,  size:84, color:'#FFB27A', inner:'#FFFFFF', ears:'tall', acc:'crown', cheeks:true, desc:'表情很高冷，其实特别想被摸头。'},
+  {id:'frog',   name:'青蛙',   short:'蛙', area:'lake',   price:10000,  base:220,  size:72, color:'#B8EBA8', inner:'#FFFFFF', ears:'none', acc:'crown', frogEyes:true, desc:'头上戴着小王冠，坚信被公主亲一下就会变成王子。'},
+  {id:'duck',   name:'小鸭',   short:'鸭', area:'lake',   price:18000,  base:350,  size:76, color:'#FFF3A8', inner:'#FFB25C', ears:'none', acc:'bow', beak:true, tuft:true, desc:'在糖果湖里划水，嘎嘎声全庄园都听得见。'},
+  {id:'penguin',name:'企鹅',   short:'鹅', area:'lake',   price:40000,  base:800,  size:82, color:'#7D86C9', inner:'#FFFFFF', ears:'none', acc:'crown', beak:true, patch:true, desc:'穿着燕尾服，坚持认为自己是王子。'},
+  {id:'unicorn',name:'独角兽', short:'角', area:'lake',   price:120000, base:2000, size:96, color:'#FFFFFF', inner:'#FFC2DA', ears:'tri', acc:'none', horn:true, mane:true, desc:'传说只有声音最可爱的公主才能领养它。'},
+  {id:'mouse',  name:'小老鼠', short:'鼠', area:'garden', wild:1,  price:300,   base:8,    size:64, color:'#E6DEEA', inner:'#FFC2DA', ears:'mouse', acc:'bow', whisk:true, desc:'住在水晶洞的石头缝里，吱吱吱地偷偷囤宝石。'},
+  {id:'owl',    name:'猫头鹰', short:'鹰', area:'garden', wild:3,  price:1500,  base:36,   size:76, color:'#D9B99B', inner:'#FFF3E3', ears:'tuftEar', acc:'crown', beak:true, bigEyes:true, desc:'在水晶洞里值夜班，咕咕咕地给迷路的小动物指路。'},
+  {id:'monkey', name:'小猴',   short:'猴', area:'garden', wild:5,  price:5000,  base:110,  size:80, color:'#D9A47A', inner:'#FFE3C9', ears:'monkey', acc:'bow', faceMask:true, desc:'在第 5 层以下荡来荡去，最会找宝石。'},
+  {id:'lion',   name:'小狮子', short:'狮', area:'garden', wild:10, price:20000, base:420,  size:92, color:'#FFD27A', inner:'#FFF1D0', ears:'round', acc:'crown', lionMane:true, muzzle:true, desc:'第 10 层以下才遇得到，吼起来其实是奶声奶气的。'},
+  {id:'elephant',name:'小象',  short:'象', area:'garden', wild:15, price:60000, base:1100, size:98, color:'#C9D3EE', inner:'#FFC2DA', ears:'big', acc:'bow', trunk:true, desc:'藏在水晶洞最深处，用鼻子喷彩虹色的水。'},
 ];
 const SP = Object.fromEntries(SPECIES.map(s=>[s.id,s]));
+function spOf(a){ return a.mix || SP[a.sp] || SP.bunny; }
+const MIXIMG={};
+function imgOf(a){ if(!a.mix) return IMG[a.sp]||IMG.bunny; let im=MIXIMG[a.uid]; if(!im){ im=new Image(); im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(animalSVG(a.mix)); MIXIMG[a.uid]=im; } return im; }
 const DRESSES = ['#FF9EC6','#C7A6FF','#9EE6C9','#FFE08A','#9ED8FF'];
 const HAIRS = ['#FFB3D1','#FFE0A3','#C98F6B','#CDB8FF'];
 
 function animalSVG(id){
-  const s = SP[id], c = s.color, k = s.inner, L = '#E87AA8';
+  const s = typeof id==='string' ? SP[id] : id, c = s.color, k = s.inner, L = '#E87AA8';
   const st = `stroke="${L}" stroke-width="2.5" stroke-linejoin="round"`;
   let back='', body='', head='', face='', front='';
   if(s.ears==='long'){
@@ -356,11 +398,22 @@ function animalSVG(id){
     back += `<circle cx="30" cy="27" r="10" fill="${c}" ${st}/><circle cx="30" cy="27" r="5" fill="${k}"/><circle cx="70" cy="27" r="10" fill="${c}" ${st}/><circle cx="70" cy="27" r="5" fill="${k}"/>`;
   } else if(s.ears==='side'){
     back += `<ellipse cx="25" cy="42" rx="11" ry="5.5" transform="rotate(-25 25 42)" fill="${c}" ${st}/><ellipse cx="75" cy="42" rx="11" ry="5.5" transform="rotate(25 75 42)" fill="${c}" ${st}/>`;
+  } else if(s.ears==='mouse'){
+    back += `<circle cx="28" cy="25" r="14" fill="${c}" ${st}/><circle cx="28" cy="25" r="8" fill="${k}"/><circle cx="72" cy="25" r="14" fill="${c}" ${st}/><circle cx="72" cy="25" r="8" fill="${k}"/>`;
+  } else if(s.ears==='tuftEar'){
+    back += `<path d="M30 30 L28 12 L42 24Z" fill="${c}" ${st}/><path d="M70 30 L72 12 L58 24Z" fill="${c}" ${st}/>`;
+  } else if(s.ears==='monkey'){
+    back += `<circle cx="24" cy="46" r="10" fill="${c}" ${st}/><circle cx="24" cy="46" r="5.5" fill="${k}"/><circle cx="76" cy="46" r="10" fill="${c}" ${st}/><circle cx="76" cy="46" r="5.5" fill="${k}"/>`;
+  } else if(s.ears==='big'){
+    back += `<ellipse cx="22" cy="50" rx="17" ry="21" fill="${c}" ${st}/><ellipse cx="23" cy="50" rx="10" ry="14" fill="${k}"/><ellipse cx="78" cy="50" rx="17" ry="21" fill="${c}" ${st}/><ellipse cx="77" cy="50" rx="10" ry="14" fill="${k}"/>`;
   }
+  if(s.horns) back += `<ellipse cx="35" cy="25" rx="4" ry="8" transform="rotate(-25 35 25)" fill="#FFE29A" stroke="#E8B23A" stroke-width="1.5"/><ellipse cx="65" cy="25" rx="4" ry="8" transform="rotate(25 65 25)" fill="#FFE29A" stroke="#E8B23A" stroke-width="1.5"/>`;
+  if(s.lionMane){ for(let i=0;i<12;i++){ const a=i/12*Math.PI*2; back += `<circle cx="${(50+Math.cos(a)*25).toFixed(1)}" cy="${(46+Math.sin(a)*25).toFixed(1)}" r="10" fill="${i%2?'#FFA94D':'#FF8A5C'}"/>`; } }
   if(s.antler) back += `<path d="M38 26 L32 8 M34 14 L26 10 M62 26 L68 8 M66 14 L74 10" stroke="#B9865E" stroke-width="4" stroke-linecap="round" fill="none"/>`;
-  if(s.mane) ['#FFB3D1','#CDB8FF','#AEEFD8','#FFE29A'].forEach((m,i)=>{ back += `<circle cx="${30+i*2}" cy="${26+i*9}" r="9" fill="${m}"/>`; });
+  if(s.mane||s.maneC) (s.maneC||['#FFB3D1','#CDB8FF','#AEEFD8','#FFE29A']).forEach((m,i)=>{ back += `<circle cx="${30+i*2}" cy="${26+i*9}" r="9" fill="${m}"/>`; });
   body += `<ellipse cx="50" cy="80" rx="25" ry="17" fill="${c}" ${st}/>`;
   if(s.patch) body += `<ellipse cx="50" cy="82" rx="15" ry="12" fill="#fff"/>`;
+  if(s.cowSpots) body += `<ellipse cx="38" cy="77" rx="7" ry="5" fill="#6E5A72" opacity=".75"/><ellipse cx="63" cy="83" rx="6" ry="4" fill="#6E5A72" opacity=".75"/>`;
   const foot = s.beak?'#FFB25C':c;
   body += `<ellipse cx="40" cy="95" rx="7" ry="4" fill="${foot}" ${st}/><ellipse cx="60" cy="95" rx="7" ry="4" fill="${foot}" ${st}/>`;
   body += `<path d="M28 84 Q34 90 40 84 Q46 90 50 84 Q54 90 60 84 Q66 90 72 84" fill="none" stroke="#FF9EC6" stroke-width="3" stroke-linecap="round"/>`;
@@ -370,12 +423,24 @@ function animalSVG(id){
   if(s.cheeks) head += `<path d="M27 50 Q38 66 50 60 Q62 66 73 50 Q66 64 50 68 Q34 64 27 50Z" fill="#fff"/>`;
   if(s.spots) head += `<circle cx="36" cy="34" r="2.5" fill="#FFF5EA"/><circle cx="64" cy="33" r="2" fill="#FFF5EA"/><circle cx="58" cy="28" r="1.8" fill="#FFF5EA"/>`;
   if(s.tuft) head += `<path d="M48 22 Q50 12 54 18 Q55 12 58 20" fill="none" stroke="${L}" stroke-width="2.5" stroke-linecap="round"/>`;
+  if(s.cowSpots) head += `<ellipse cx="36" cy="36" rx="7" ry="6" fill="#6E5A72" opacity=".75"/><circle cx="66" cy="40" r="4" fill="#6E5A72" opacity=".75"/>`;
+  if(s.faceMask) head += `<circle cx="42" cy="44" r="10" fill="${k}"/><circle cx="58" cy="44" r="10" fill="${k}"/><ellipse cx="50" cy="55" rx="14" ry="10" fill="${k}"/>`;
+  if(s.eyePatch) head += `<ellipse cx="61" cy="44" rx="8" ry="9" fill="${k}" opacity=".85"/>`;
   if(s.muzzle) head += `<ellipse cx="50" cy="56" rx="10" ry="7" fill="${k}"/>`;
-  face += `<ellipse cx="40" cy="45" rx="3.6" ry="4.4" fill="#5A2140"/><ellipse cx="60" cy="45" rx="3.6" ry="4.4" fill="#5A2140"/><circle cx="41.3" cy="43.4" r="1.4" fill="#fff"/><circle cx="61.3" cy="43.4" r="1.4" fill="#fff"/>`;
+  if(s.ears==='flop') head += `<ellipse cx="27" cy="44" rx="8" ry="15" transform="rotate(22 27 44)" fill="${k}" ${st}/><ellipse cx="73" cy="44" rx="8" ry="15" transform="rotate(-22 73 44)" fill="${k}" ${st}/>`;
+  if(s.frogEyes){
+    face += `<circle cx="37" cy="27" r="10" fill="${c}" ${st}/><circle cx="63" cy="27" r="10" fill="${c}" ${st}/><circle cx="37" cy="27" r="6.5" fill="#fff"/><circle cx="63" cy="27" r="6.5" fill="#fff"/><circle cx="38" cy="28" r="3.6" fill="#5A2140"/><circle cx="64" cy="28" r="3.6" fill="#5A2140"/><circle cx="39" cy="26.5" r="1.2" fill="#fff"/><circle cx="65" cy="26.5" r="1.2" fill="#fff"/>`;
+  } else {
+    if(s.bigEyes) face += `<circle cx="40" cy="45" r="8.5" fill="#fff" ${st}/><circle cx="60" cy="45" r="8.5" fill="#fff" ${st}/>`;
+    face += `<ellipse cx="40" cy="45" rx="3.6" ry="4.4" fill="#5A2140"/><ellipse cx="60" cy="45" rx="3.6" ry="4.4" fill="#5A2140"/><circle cx="41.3" cy="43.4" r="1.4" fill="#fff"/><circle cx="61.3" cy="43.4" r="1.4" fill="#fff"/>`;
+  }
   face += `<ellipse cx="32" cy="54" rx="4.5" ry="2.8" fill="#FF7EB3" opacity=".5"/><ellipse cx="68" cy="54" rx="4.5" ry="2.8" fill="#FF7EB3" opacity=".5"/>`;
-  if(s.beak) face += `<ellipse cx="50" cy="54" rx="7" ry="4.5" fill="#FFB25C" stroke="#E8913A" stroke-width="1.5"/>`;
+  if(s.trunk) face += `<path d="M47 52 Q44 68 51 72 Q58 74 59 67" fill="none" stroke="${L}" stroke-width="11" stroke-linecap="round"/><path d="M47 52 Q44 68 51 72 Q58 74 59 67" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round"/>`;
+  else if(s.beak) face += `<ellipse cx="50" cy="54" rx="7" ry="4.5" fill="#FFB25C" stroke="#E8913A" stroke-width="1.5"/>`;
+  else if(s.frogEyes) face += `<path d="M36 52 Q50 62 64 52" fill="none" stroke="#5A2140" stroke-width="2" stroke-linecap="round"/>`;
   else if(s.snout) face += `<ellipse cx="50" cy="54" rx="8" ry="5.5" fill="${k}" ${st}/><ellipse cx="47" cy="54" rx="1.4" ry="2" fill="#C2507F"/><ellipse cx="53" cy="54" rx="1.4" ry="2" fill="#C2507F"/>`;
   else face += `<ellipse cx="50" cy="51.5" rx="2.2" ry="1.6" fill="#C2507F"/><path d="M46 54 Q48 57 50 54 Q52 57 54 54" fill="none" stroke="#5A2140" stroke-width="1.6" stroke-linecap="round"/>`;
+  if(s.tongue && !s.beak && !s.trunk) face += `<ellipse cx="50" cy="60" rx="3.2" ry="4" fill="#FF7EB3"/>`;
   if(s.whisk) face += `<path d="M24 50 L33 52 M24 56 L33 55 M76 50 L67 52 M76 56 L67 55" stroke="#C99C7E" stroke-width="1.4" stroke-linecap="round"/>`;
   if(s.horn) front += `<path d="M45 24 L50 2 L55 24Z" fill="#FFD66B" stroke="#E8B23A" stroke-width="2"/><path d="M46.5 18 L53.5 15 M48 11 L52.5 9" stroke="#E8B23A" stroke-width="1.5"/><circle cx="66" cy="28" r="4" fill="#FFB3D1"/><circle cx="70" cy="25" r="3" fill="#CDB8FF"/>`;
   if(s.acc==='crown') front += `<path d="M39 24 L39 14 L44 19 L50 9 L56 19 L61 14 L61 24Z" fill="#FFD66B" stroke="#E8B23A" stroke-width="2" stroke-linejoin="round"/><circle cx="50" cy="19" r="2.2" fill="#FF7EB3"/>`;
@@ -393,7 +458,7 @@ if(!S){
   let old = null; try{ old = JSON.parse(localStorage.getItem('pvz_state_v1')||'null'); }catch(e){}
   S = { coins: old ? old.coins : 30, animals: [], unlocked:{garden:true, hill:false, lake:false},
         p:{x:420, y:760}, look:{dress:0, hair:0}, muted: old ? !!old.muted : false, last: old ? old.last : Date.now(), seen:['bunny'] };
-  if(old && Array.isArray(old.animals)) old.animals.forEach(a=>{ if(SP[a.sp]) S.animals.push({uid:a.uid, sp:a.sp, name:a.name, lvl:a.lvl||1, pitch:a.pitch||SP[a.sp].pitch, voice:!!a.voice}); });
+  if(old && Array.isArray(old.animals)) old.animals.forEach(a=>{ if(spOf(a)) S.animals.push({uid:a.uid, sp:a.sp, name:a.name, lvl:a.lvl||1, pitch:a.pitch||spOf(a).pitch, voice:!!a.voice}); });
   if(!S.animals.length) S.animals.push({uid:uid(), sp:'bunny', name:'糯米', lvl:1, pitch:SP.bunny.pitch, voice:false});
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -401,18 +466,19 @@ function uid(){ return Math.random().toString(36).slice(2,10); }
 if(!S.origVoice){ S.animals.forEach(a=>a.pitch=1); S.origVoice=true; }
 S.animals.forEach(a=>{ if(a.mood==null) a.mood=70; });
 S.inv=S.inv||{berry:0,flower:0};
-S.bag=S.bag||{}; S.mine=S.mine||{best:1}; S.hammer=S.hammer||1; S.maxE=S.maxE||60; S.maxHp=S.maxHp||5; S.charm=S.charm||0;
+S.bag=S.bag||{}; S.mine=S.mine||{best:1}; if(S.mine.best>1 && S.mine.best%5===0) S.mine.best+=1; S.hammer=S.hammer||1; S.maxE=S.maxE||60; S.maxHp=S.maxHp||5; S.charm=S.charm||0;
 if(S.energy==null) S.energy=S.maxE;
 S.energy=Math.min(S.maxE, S.energy + Math.max(0,(Date.now()-(S.last||Date.now()))/1000/20));
 let scene='farm';
 if(!Array.isArray(S.tasks)) S.tasks=[];
 let saveT=null;
 function saveSoon(){ if(saveT) return; saveT=setTimeout(()=>{ saveT=null; if(typeof P!=='undefined') if(scene==='farm') S.p={x:Math.round(P.x),y:Math.round(P.y)}; save(); }, 300); }
-function save(){ S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify({...S, animals:S.animals.map(({uid,sp,name,lvl,pitch,voice,mood})=>({uid,sp,name,lvl,pitch,voice,mood}))})); }catch(e){} }
+let noSave=false;
+function save(){ if(noSave) return; S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify({...S, animals:S.animals.map(({uid,sp,name,lvl,pitch,voice,mood,mix,born,breedCd})=>({uid,sp,name,lvl,pitch,voice,mood,mix,born,breedCd}))})); }catch(e){} }
 const moodMult = a => (a.mood??70)>=80 ? 1.5 : (a.mood??70)>=40 ? 1 : 0.6;
-const income = a => Math.round(SP[a.sp].base * a.lvl * (1 + (a.lvl-1)*0.25) * moodMult(a) * (1+0.1*(S.charm||0)));
-const upCost = a => Math.round(Math.max(20, SP[a.sp].price*0.6) * Math.pow(1.7, a.lvl-1));
-const owned = id => S.animals.filter(a=>a.sp===id).length;
+const income = a => Math.round((growF(a)<1?0.5:1) * spOf(a).base * a.lvl * (1 + (a.lvl-1)*0.25) * moodMult(a) * (1+0.1*(S.charm||0)));
+const upCost = a => Math.round(Math.max(20, spOf(a).price*0.6) * Math.pow(1.7, a.lvl-1));
+const owned = id => S.animals.filter(a=>a.sp===id && !a.mix).length;
 const adoptCost = sp => sp.price===0 ? Math.round(15*Math.pow(1.4, owned(sp.id))) : Math.round(sp.price*Math.pow(1.4, owned(sp.id)));
 const CRY = 7;
 function fmt(n){ n=Math.floor(n); if(n<10000) return String(n); if(n<1e8) return (n/1e4).toFixed(n<1e5?1:0).replace(/\.0$/,'')+'万'; return (n/1e8).toFixed(1).replace(/\.0$/,'')+'亿'; }
@@ -427,6 +493,7 @@ const OBST = [
   {type:'ell', x:230, y:250, rx:120, ry:55},   // castle base
   {type:'ell', x:1700, y:300, rx:55, ry:28},   // windmill base
   {type:'ell', x:170, y:1050, rx:100, ry:40},  // crystal cave
+  {type:'ell', x:850, y:262, rx:75, ry:28},   // love house
 ];
 const inEll = (o,x,y,pad=0)=>{ const dx=(x-o.x)/(o.rx+pad), dy=(y-o.y)/(o.ry+pad); return dx*dx+dy*dy<1; };
 const TREES = [];
@@ -464,7 +531,7 @@ function rt(a){
   }
   return r;
 }
-function homeOf(a){ const ar = SP[a.sp].area; return S.unlocked[ar] ? ar : 'garden'; }
+function homeOf(a){ const ar = spOf(a).area; return S.unlocked[ar] ? ar : 'garden'; }
 function randPoint(area){
   const A = AREAS[area];
   for(let i=0;i<60;i++){ const x=A.x+80+Math.random()*(A.w-160), y=A.y+90+Math.random()*(A.h-160); if(walkable(x,y,30)) return {x,y}; }
@@ -487,7 +554,7 @@ const endJoy = e=>{
   if(joy.moved<10 && performance.now()-joy.t<350){
     const wx = joy.sx/SC+camX, wy = joy.sy/SC+camY;
     let hit=null, bd=1e9;
-    for(const a of S.animals){ const r=rt(a), sz=SP[a.sp].size; const d=Math.hypot(wx-r.x, wy-(r.y-sz*0.45)); if(d<sz*0.6 && d<bd){ bd=d; hit=a; } }
+    for(const a of S.animals){ const r=rt(a), sz=spOf(a).size; const d=Math.hypot(wx-r.x, wy-(r.y-sz*0.45)); if(d<sz*0.6 && d<bd){ bd=d; hit=a; } }
     if(scene==='mine') hammerReq=true;
     else if(hit) openCard(hit.uid);
   }
@@ -605,7 +672,7 @@ const unlockBtn=document.getElementById('unlockBtn'), bookDot=document.getElemen
 const rate = ()=> S.animals.filter(a=>a.voice).reduce((t,a)=>t+income(a),0)*60/CRY;
 function hud(){
   coinEl.textContent=fmt(S.coins); rateEl.textContent='每分钟 ★'+fmt(rate());
-  const canAdopt = SPECIES.some(sp=>S.unlocked[sp.area] && owned(sp.id)===0 && S.coins>=adoptCost(sp));
+  const canAdopt = SPECIES.some(sp=>!sp.wild && S.unlocked[sp.area] && owned(sp.id)===0 && S.coins>=adoptCost(sp));
   bookDot.classList.toggle('hidden', !canAdopt);
 }
 let toastT=null;
@@ -616,7 +683,7 @@ unlockBtn.onclick=()=>{
   if(!nearGate) return; const A=AREAS[nearGate];
   if(S.coins<A.cost) return;
   S.coins-=A.cost; S.unlocked[nearGate]=true; save(); hud();
-  for(const a of S.animals) if(SP[a.sp].area===nearGate){ const r=rt(a); const p=randPoint(nearGate); r.tx=p.x; r.ty=p.y; }
+  for(const a of S.animals) if(spOf(a).area===nearGate){ const r=rt(a); const p=randPoint(nearGate); r.tx=p.x; r.ty=p.y; }
   toast(`${A.name}开放啦！`); nearGate=null; unlockBtn.classList.add('hidden');
 };
 
@@ -672,7 +739,7 @@ function step(now){
       const dx=r.tx-r.x, dy=r.ty-r.y, d=Math.hypot(dx,dy);
       if(d<4){ r.wait=1.5+Math.random()*4; const p=randPoint(homeOf(a)); r.tx=p.x; r.ty=p.y; }
       else {
-        const v=(SP[a.sp].size>90?38:48)*dt, nx=r.x+dx/d*v, ny=r.y+dy/d*v;
+        const v=(spOf(a).size>90?38:48)*dt, nx=r.x+dx/d*v, ny=r.y+dy/d*v;
         if(walkable(nx,ny,20)){ r.x=nx; r.y=ny; r.dir=dx>0?1:-1; } else { r.wait=0.5; const p=randPoint(homeOf(a)); r.tx=p.x; r.ty=p.y; }
       }
     }
@@ -696,12 +763,13 @@ function invHud(){ invEl.textContent=`🍓 ${S.inv.berry||0}　🌸 ${S.inv.flow
 const WISH={berry:'🍓', flower:'🌸', pet:'💕'};
 const moodFace=a=> a.mood>=80?'😊':a.mood>=40?'🙂':'😢';
 let nearA=null, actKey='', actMode='';
-const CAVE={x:170,y:1120}, SHOPPT={x:230,y:335};
+const CAVE={x:170,y:1120}, SHOPPT={x:230,y:335}, LOVE={x:850,y:318};
 function actHud(){
   let key='', txt='', dis=false; actMode='';
   if(!nearGate){
     if(Math.hypot(P.x-CAVE.x,P.y-CAVE.y)<90){ actMode='cave'; txt='进入水晶洞 ⛏️'; key='cave'; }
     else if(Math.hypot(P.x-SHOPPT.x,P.y-SHOPPT.y)<85){ actMode='shop'; txt='进入城堡工坊 🛠️'; key='shop'; }
+    else if(Math.hypot(P.x-LOVE.x,P.y-LOVE.y)<85){ actMode='love'; txt='进入爱心小屋 💞'; key='love'; }
   }
   if(!key && nearA && !nearGate){
     actMode='animal';
@@ -718,6 +786,7 @@ function actHud(){
 actBtn.onclick=()=>{
   if(actMode==='cave'){ openCave(); return; }
   if(actMode==='shop'){ openWork(); return; }
+  if(actMode==='love'){ openLove(); return; }
   const a=nearA; if(!a) return; const r=rt(a); ac();
   let reward=0;
   if(r.wish==='berry'||r.wish==='flower'){
@@ -730,12 +799,12 @@ actBtn.onclick=()=>{
     if(r.wish==='pet'){ r.wish=null; r.wishIn=50+Math.random()*60; a.mood=Math.min(100,a.mood+28); reward=income(a)*8+5; track('wish',1); }
   }
   r.hop=0.5; r.wait=Math.max(r.wait,1.2); r.dir = P.x<r.x?-1:1;
-  floats.push({x:r.x,y:r.y-SP[a.sp].size-10,txt:'💕',t:0,c:'#FF5E9E'});
-  if(reward){ S.coins+=reward; floats.push({x:r.x+24,y:r.y-SP[a.sp].size-34,txt:'+'+fmt(reward)+' ★',t:0}); }
+  floats.push({x:r.x,y:r.y-spOf(a).size-10,txt:'💕',t:0,c:'#FF5E9E'});
+  if(reward){ S.coins+=reward; floats.push({x:r.x+24,y:r.y-spOf(a).size-34,txt:'+'+fmt(reward)+' ★',t:0}); }
   if(a.voice) playVoice(a,true,0.9);
   invHud(); hud(); saveSoon(); actKey=''; if(cardUid===a.uid) refreshCard();
 };
-const TASK_T=[{k:'pick_berry',n:'采草莓',i:'🍓',a:5,b:12},{k:'pick_flower',n:'摘小花',i:'🌸',a:4,b:10},{k:'wish',n:'满足动物的心愿',i:'💝',a:2,b:5},{k:'pet',n:'摸摸小动物',i:'💕',a:5,b:12},{k:'cry',n:'听动物叫',i:'🎵',a:20,b:60},{k:'mine_rock',n:'在水晶洞敲碎石头',i:'⛏️',a:15,b:40},{k:'mine_floor',n:'往水晶洞深处走',i:'🪜',a:2,b:6}];
+const TASK_T=[{k:'pick_berry',n:'采草莓',i:'🍓',a:5,b:12},{k:'pick_flower',n:'摘小花',i:'🌸',a:4,b:10},{k:'wish',n:'满足动物的心愿',i:'💝',a:2,b:5},{k:'pet',n:'摸摸小动物',i:'💕',a:5,b:12},{k:'cry',n:'听动物叫',i:'🎵',a:20,b:60},{k:'mine_rock',n:'在水晶洞敲碎石头',i:'⛏️',a:15,b:40},{k:'mine_floor',n:'往水晶洞深处走',i:'🪜',a:2,b:6},{k:'befriend',n:'在水晶洞带小动物回家',i:'🐾',a:1,b:2},{k:'breed',n:'在爱心小屋生宝宝',i:'💞',a:1,b:1}];
 function newTask(){
   const used=S.tasks.map(t=>t.k); const pool=TASK_T.filter(t=>!used.includes(t.k));
   const tt=pool[Math.floor(Math.random()*pool.length)]; const goal=tt.a+Math.floor(Math.random()*(tt.b-tt.a+1));
@@ -775,7 +844,7 @@ function pickup(k){
 
 function cry(a,r){
   const e=income(a); S.coins+=e; r.hop=0.5;
-  if(scene==='farm') floats.push({x:r.x, y:r.y-SP[a.sp].size-6, txt:'+'+fmt(e)+' ★', t:0});
+  if(scene==='farm') floats.push({x:r.x, y:r.y-spOf(a).size-6, txt:'+'+fmt(e)+' ★', t:0});
   // louder when the princess is close
   const d=Math.hypot(P.x-r.x,P.y-r.y);
   if(scene==='farm') playVoice(a,false, Math.max(0.65, 1-d/1400));
@@ -832,7 +901,7 @@ function draw(){
   const objs=[];
   for(const k of PICKS){ if(vis(k.x,k.y)) pickup(k); }
   TREES.forEach(t=>{ if(vis(t.x,t.y,160)) objs.push({y:t.y, d:()=>tree(t)}); });
-  objs.push({y:300, d:castle}); objs.push({y:310, d:windmill}); objs.push({y:1060, d:caveMouth});
+  objs.push({y:300, d:castle}); objs.push({y:310, d:windmill}); objs.push({y:1060, d:caveMouth}); objs.push({y:262, d:loveHouse});
   for(const a of S.animals){ const r=rt(a); if(vis(r.x,r.y)) objs.push({y:r.y, d:()=>drawAnimal(a,r)}); }
   objs.push({y:P.y, d:()=>princess(ctx,P.x,P.y,P.dir,P.moving?P.t:0,S.look)});
   objs.sort((a,b)=>a.y-b.y).forEach(o=>o.d());
@@ -876,62 +945,134 @@ const GEMS={
   star:{n:'星钻',i:'💎',price:120, c:'#7FD3FF'},
   rainbow:{n:'彩虹石',i:'🌈',price:500, c:'#FFC94D'},
   jelly:{n:'果冻糖',i:'🍬',price:5},
+  bomb:{n:'糖果炸弹',i:'💣',price:10},
 };
-const M={floor:1, rocks:[], slimes:[], ladder:null, hp:5, trip:{}, cd:0, swing:0, inv:0, deco:[]};
-let hammerReq=false;
-function gemFor(f){ const r=Math.random(); if(f>=18&&r<0.04) return 'rainbow'; if(f>=10&&r<0.12) return 'star'; if(f>=5&&r<0.27) return 'amethyst'; if(r<0.42) return 'quartz'; return null; }
-function slimeColor(f){ return f<5?'#FF9EC6':f<10?'#8FD8FF':f<18?'#C7A6FF':'#FFD66B'; }
+const THEMES=[
+  {max:9,   n:'粉晶洞',       wall:'#6B4A86', top:'#7E5C9B', floor:'#EBDDF7', check:'rgba(205,184,255,.25)', rock:'#D6C6E0', rockS:'#A890B8', bg:'#3B2346'},
+  {max:19,  n:'冰糖洞',       wall:'#4A6A9E', top:'#5B7FB5', floor:'#DDEEFB', check:'rgba(143,216,255,.28)', rock:'#C9DDF0', rockS:'#8FAACB', bg:'#22314A'},
+  {max:29,  n:'巧克力熔岩洞', wall:'#7A4A3E', top:'#8E5A4A', floor:'#FBE3D3', check:'rgba(255,178,122,.25)', rock:'#E3C4B4', rockS:'#B58E7B', bg:'#3A221C'},
+  {max:1e9, n:'彩虹深渊',     wall:'#5A3E86', top:'#6E4FA0', floor:'#FFF0FA', check:'rgba(255,214,107,.22)', rock:'#E9D8F2', rockS:'#B99BD0', bg:'#2A1A40'},
+];
+const theme=f=>THEMES.find(t=>f<=t.max);
+const SKILL_OF={puppy:'find',fox:'find',owl:'find',cat:'fight',bear:'fight',lion:'fight',pig:'dig',mouse:'dig',monkey:'dig',chick:'snack',duck:'snack',penguin:'snack',sheep:'strong',cow:'strong',horse:'strong',deer:'strong',elephant:'strong',bunny:'heal',frog:'heal',unicorn:'heal'};
+const SKILLS={find:{n:'寻宝',d:'会帮你闻出梯子在哪里（看公主身边的小箭头）'},fight:{n:'战斗',d:'会自己去打附近的怪'},dig:{n:'挖宝',d:'挖到宝石时多给 1 颗'},snack:{n:'觅食',d:'每到新的一层帮你找到吃的，体力 +6'},strong:{n:'大力',d:'敲石头和打怪的力气 +1'},heal:{n:'治愈',d:'每到新的一层恢复 1 颗心'}};
+const skillOf=a=>SKILL_OF[a.mix?a.mix.from:a.sp]||'heal';
+const M={floor:1, rocks:[], foes:[], items:[], bombs:[], booms:[], ladder:null, ladderRock:null, wild:null, hp:5, trip:{}, cd:0, swing:0, inv:0, deco:[], pal:THEMES[0], boss:false};
+let hammerReq=false, comp=null, mActKey='';
+const mAct=document.getElementById('mAct');
+function gemFor(f){ const r=Math.random(); if(f>=18&&r<0.05) return 'rainbow'; if(f>=10&&r<0.13) return 'star'; if(f>=5&&r<0.28) return 'amethyst'; if(r<0.42) return 'quartz'; return null; }
+function gemBest(f){ return f>=25?'rainbow':f>=12?'star':f>=5?'amethyst':'quartz'; }
+function pickWild(f){
+  if(Math.random()<0.6){ const pool=SPECIES.filter(s=>s.wild && f>=s.wild); if(pool.length) return pool[Math.floor(Math.random()*pool.length)].id; }
+  const pool=SPECIES.filter(s=>!s.wild); return pool[Math.floor(Math.random()*pool.length)].id;
+}
+function mkFoe(type,x,y,f){
+  const b={type,x,y,vx:0,vy:0,air:0,hopT:Math.random(),hit:0,t:Math.random()*5,ph:Math.random()*6};
+  if(type==='slime') b.hp=2+Math.floor(f/6);
+  if(type==='bat') b.hp=1+Math.floor(f/10);
+  if(type==='golem') b.hp=5+Math.floor(f/4);
+  if(type==='boss'){ b.hp=24+f*2; b.spawnT=4; }
+  b.max=b.hp; return b;
+}
+function freeSpot(){ for(let k=0;k<80;k++){ const x=TILE*(1.5+Math.random()*(MCOLS-3)), y=TILE*(1.6+Math.random()*(MROWS-2.6)); if(Math.hypot(x-TILE*1.5,y-TILE*1.6)<170) continue; if(mineWalk(x,y,22) && !M.items.some(i=>Math.hypot(i.x-x,i.y-y)<60)) return {x,y}; } return null; }
 function genFloor(f){
-  M.floor=f; M.rocks=[]; M.slimes=[]; M.ladder=null; floats.length=0;
+  M.floor=f; M.rocks=[]; M.foes=[]; M.items=[]; M.bombs=[]; M.booms=[]; M.ladder=null; M.ladderRock=null; M.wild=null; floats.length=0;
+  M.pal=theme(f); M.boss = f%10===0;
   const RG=rng(f*131+7);
   M.deco=[]; for(let i=0;i<22;i++) M.deco.push({x:RG()*MW, top:RG()<0.6, s:0.6+RG()*0.7, c:['#FFB3D1','#CDB8FF','#AEEFD8','#FFE29A'][Math.floor(RG()*4)]});
   for(let r=1;r<MROWS-1;r++) for(let c=1;c<MCOLS-1;c++){
     if(c<=2 && r<=2) continue;
-    if(Math.random()<0.34){ const gem=gemFor(f); const hp=2+Math.floor(f/8)+(gem?1:0);
+    const dens = M.boss ? ((r===1||r===MROWS-2||c===1||c===MCOLS-2)?0.5:0) : 0.34;
+    if(Math.random()<dens){ const gem=gemFor(f); const hp=2+Math.floor(f/8)+(gem?1:0);
       M.rocks.push({x:c*TILE+TILE/2+(Math.random()*14-7), y:r*TILE+TILE/2+(Math.random()*14-7), hp, max:hp, gem, wob:0}); }
   }
-  M.ladderRock = M.rocks.length ? M.rocks[Math.floor(Math.random()*M.rocks.length)] : null;
-  const n=Math.min(1+Math.floor(f/3),7);
-  for(let i=0;i<n;i++){
-    for(let k=0;k<40;k++){ const x=TILE*(4+Math.random()*(MCOLS-6)), y=TILE*(2+Math.random()*(MROWS-4)); if(mineWalk(x,y,18)){ M.slimes.push({x,y,hp:2+Math.floor(f/6),vx:0,vy:0,air:0,hopT:Math.random(),hit:0,t:Math.random()*5}); break; } }
-  }
+  if(!M.boss && M.rocks.length) M.ladderRock = M.rocks[Math.floor(Math.random()*M.rocks.length)];
   P.x=TILE*1.5; P.y=TILE*1.6; P.dir=1;
-  if(!M.rocks.length) M.ladder={x:MW/2,y:MH/2};
-  mineHud();
+  if(comp){ comp.x=P.x-34; comp.y=P.y+8; }
+  if(M.boss){
+    M.foes.push(mkFoe('boss',MW*0.6,MH*0.55,f));
+  } else {
+    if(Math.random()<0.38){ const p=freeSpot(); if(p) M.items.push({k:'chest',x:p.x,y:p.y,t:0}); }
+    const ns=Math.random()<0.6?1:2; for(let i=0;i<ns;i++){ const p=freeSpot(); if(p) M.items.push({k:'shroom',x:p.x,y:p.y,t:Math.random()*5}); }
+    const n=Math.min(1+Math.floor(f/3),7);
+    for(let i=0;i<n;i++){ const r=Math.random(); const type = f>=8&&r<0.25?'golem' : f>=4&&r<0.55?'bat' : 'slime'; const p=freeSpot(); if(p) M.foes.push(mkFoe(type,p.x,p.y,f)); }
+    if(Math.random()<(f<3?0.35:0.28)){ const p=freeSpot(); if(p) M.wild={sp:pickWild(f), x:p.x, y:p.y, t:0}; }
+  }
+  if(!M.rocks.length && !M.boss) M.ladder={x:MW/2,y:MH/2};
+  mActKey=''; mineHud();
 }
 function mineWalk(x,y,pad=16){
   if(x<TILE*0.75+pad*0.4 || x>MW-TILE*0.75-pad*0.4 || y<TILE*1.05+pad*0.3 || y>MH-TILE*0.45-pad*0.3) return false;
   for(const r of M.rocks) if(Math.hypot(x-r.x,(y-r.y)*1.2)<26+pad*0.6) return false;
   return true;
 }
+function inBounds(x,y){ return x>TILE*0.8 && x<MW-TILE*0.8 && y>TILE*1.1 && y<MH-TILE*0.5; }
 function gain(k,n){ S.bag[k]=(S.bag[k]||0)+n; M.trip[k]=(M.trip[k]||0)+n; }
 function revealLadder(x,y){ if(M.ladder) return; M.ladder={x,y}; toast('发现梯子了！走过去就能下一层 🪜'); }
+function power(){ return S.hammer + (comp && skillOf(comp.a)==='strong' ? 1 : 0); }
+function breakRock(r){
+  M.rocks.splice(M.rocks.indexOf(r),1);
+  gain('stone',1); let txt='+1 🪨';
+  if(r.gem){ let n=r.gem==='quartz'?1+Math.floor(Math.random()*2):1; if(comp && skillOf(comp.a)==='dig') n++; gain(r.gem,n); txt=`+${n} ${GEMS[r.gem].i}`; }
+  floats.push({x:r.x,y:r.y-34,txt,t:0,c:r.gem?GEMS[r.gem].c:'#9A7FA6'});
+  track('mine_rock',1);
+  if(r===M.ladderRock || (!M.ladder && !M.boss && Math.random()<0.08)) revealLadder(r.x,r.y);
+}
+function killFoe(b){
+  M.foes.splice(M.foes.indexOf(b),1);
+  const f=M.floor;
+  if(b.type==='slime' && Math.random()<0.6){ gain('jelly',1); floats.push({x:b.x,y:b.y-30,txt:'+1 🍬',t:0,c:'#FF5E9E'}); }
+  if(b.type==='bat' && Math.random()<0.4){ gain('jelly',1); floats.push({x:b.x,y:b.y-30,txt:'+1 🍬',t:0,c:'#FF5E9E'}); }
+  if(b.type==='golem'){ const g=gemBest(f); gain(g,2); gain('stone',3); floats.push({x:b.x,y:b.y-40,txt:`+2 ${GEMS[g].i}`,t:0,c:GEMS[g].c}); }
+  if(b.type==='boss'){
+    const g=gemBest(f), coins=300+f*40; gain(g,4); gain('bomb',2); if(f>=20) gain('rainbow',1); S.coins+=coins;
+    floats.push({x:b.x,y:b.y-80,txt:`+${fmt(coins)} ★`,t:0}); floats.push({x:b.x,y:b.y-50,txt:`+4 ${GEMS[g].i} +2 💣`,t:-0.3,c:GEMS[g].c});
+    M.foes.length=0; revealLadder(b.x,b.y); M.items.push({k:'chest',x:b.x+70,y:b.y,t:0});
+    toast('打败了果冻王！👑', 3000); track('mine_boss',1);
+  }
+  if(!M.boss && !M.foes.length && !M.ladder && Math.random()<0.4) revealLadder(b.x,b.y);
+}
+function hurtFoe(b,dmg,fromX,fromY){
+  b.hp-=dmg; b.hit=0.25;
+  if(b.type!=='boss'){ const a=Math.atan2(b.y-fromY,b.x-fromX); b.vx=Math.cos(a)*240; b.vy=Math.sin(a)*240; b.air=0.18; }
+  if(b.hp<=0) killFoe(b);
+}
+function openChest(it){
+  M.items.splice(M.items.indexOf(it),1);
+  const f=M.floor, r=Math.random(); let txt;
+  if(r<0.35){ const c=50+f*25; S.coins+=c; txt=`+${fmt(c)} ★`; }
+  else if(r<0.6){ const n=1+Math.floor(Math.random()*2); gain('bomb',n); txt=`+${n} 💣`; }
+  else if(r<0.85){ const g=gemBest(f), n=2+Math.floor(Math.random()*2); gain(g,n); txt=`+${n} ${GEMS[g].i}`; }
+  else { S.inv.berry=(S.inv.berry||0)+3; txt='+3 🍓'; }
+  floats.push({x:it.x,y:it.y-40,txt:'🎁 '+txt,t:0,c:'#E8A400'}); hud(); invHud();
+}
 function swingHammer(){
   if(M.cd>0) return; M.cd=0.3; M.swing=0.25;
   let best=null, bd=1e9, kind='';
-  for(const s2 of M.slimes){ const d=Math.hypot(P.x-s2.x,P.y-s2.y); if(d<82 && d<bd){ bd=d; best=s2; kind='slime'; } }
+  for(const b of M.foes){ const d=Math.hypot(P.x-b.x,P.y-b.y); const reach=b.type==='boss'?120:82; if(d<reach && d<bd){ bd=d; best=b; kind='foe'; } }
+  if(!best) for(const it of M.items){ if(it.k!=='chest') continue; const d=Math.hypot(P.x-it.x,P.y-it.y); if(d<80 && d<bd){ bd=d; best=it; kind='chest'; } }
   if(!best) for(const r of M.rocks){ const d=Math.hypot(P.x-r.x,P.y-r.y); if(d<88 && d<bd){ bd=d; best=r; kind='rock'; } }
   if(!best) return;
   P.dir = best.x<P.x?-1:1;
-  if(kind==='slime'){
-    best.hp-=S.hammer; best.hit=0.25; const a=Math.atan2(best.y-P.y,best.x-P.x); best.vx=Math.cos(a)*260; best.vy=Math.sin(a)*260; best.air=0.18;
-    if(best.hp<=0){ M.slimes.splice(M.slimes.indexOf(best),1);
-      if(Math.random()<0.6){ gain('jelly',1); floats.push({x:best.x,y:best.y-30,txt:'+1 🍬',t:0,c:'#FF5E9E'}); }
-      if(!M.slimes.length && !M.ladder && Math.random()<0.5) revealLadder(best.x,best.y);
-    }
-  } else {
+  if(kind==='foe') hurtFoe(best, power(), P.x, P.y);
+  else if(kind==='chest') openChest(best);
+  else {
     if(S.energy<1){ toast('没力气了… 吃颗草莓 🍓 补充体力吧'); return; }
-    S.energy=Math.max(0,S.energy-1); best.hp-=S.hammer; best.wob=0.22;
-    if(best.hp<=0){
-      M.rocks.splice(M.rocks.indexOf(best),1);
-      gain('stone',1); let txt='+1 🪨';
-      if(best.gem){ const n=best.gem==='quartz'?1+Math.floor(Math.random()*2):1; gain(best.gem,n); txt=`+${n} ${GEMS[best.gem].i}`; }
-      floats.push({x:best.x,y:best.y-34,txt,t:0,c:best.gem?GEMS[best.gem].c:'#9A7FA6'});
-      track('mine_rock',1);
-      if(best===M.ladderRock || (!M.ladder && Math.random()<0.1)) revealLadder(best.x,best.y);
-    }
+    S.energy=Math.max(0,S.energy-1); best.hp-=power(); best.wob=0.22;
+    if(best.hp<=0) breakRock(best);
   }
   mineHud(); saveSoon();
+}
+function dropBomb(){
+  if((S.bag.bomb||0)<1){ toast('没有糖果炸弹了，可以在城堡工坊做，或者在宝箱里找'); return; }
+  S.bag.bomb--; M.bombs.push({x:P.x+P.dir*20,y:P.y,t:1.3}); mineHud(); saveSoon();
+}
+function explode(bm){
+  M.booms.push({x:bm.x,y:bm.y,t:0.45});
+  for(const r of M.rocks.slice()) if(Math.hypot(r.x-bm.x,r.y-bm.y)<125) breakRock(r);
+  for(const b of M.foes.slice()) if(Math.hypot(b.x-bm.x,b.y-bm.y)<(b.type==='boss'?170:125)) hurtFoe(b, 4+Math.floor(M.floor/5), bm.x, bm.y);
+  for(const it of M.items.slice()) if(it.k==='chest' && Math.hypot(it.x-bm.x,it.y-bm.y)<125) openChest(it);
+  mineHud();
 }
 function mineStep(dt,ix,iy,im){
   const sp=200; P.moving=im>0.05;
@@ -939,46 +1080,98 @@ function mineStep(dt,ix,iy,im){
   M.cd-=dt; if(M.swing>0) M.swing-=dt; if(M.inv>0) M.inv-=dt;
   if(hammerReq){ hammerReq=false; swingHammer(); }
   if(M.ladder && Math.hypot(P.x-M.ladder.x,P.y-M.ladder.y)<34){ nextFloor(); return; }
-  const spd=70+Math.min(M.floor,30)*3;
-  for(const s2 of M.slimes){
-    s2.t+=dt; if(s2.hit>0) s2.hit-=dt;
-    const dx=P.x-s2.x, dy=P.y-s2.y, d=Math.hypot(dx,dy);
-    s2.hopT-=dt;
-    if(s2.hopT<=0 && s2.air<=0){ s2.hopT=0.7+Math.random()*0.7; const a = d<320 ? Math.atan2(dy,dx)+(Math.random()-0.5)*0.6 : Math.random()*6.28; s2.vx=Math.cos(a)*spd; s2.vy=Math.sin(a)*spd; s2.air=0.4; }
-    if(s2.air>0){ s2.air-=dt; const nx=s2.x+s2.vx*dt, ny=s2.y+s2.vy*dt; if(mineWalk(nx,s2.y,12)) s2.x=nx; if(mineWalk(s2.x,ny,12)) s2.y=ny; }
-    if(d<30 && M.inv<=0 && s2.hit<=0){
+  // pickups
+  for(const it of M.items.slice()){ it.t+=dt; if(it.k==='shroom' && Math.hypot(P.x-it.x,P.y-it.y)<36){ M.items.splice(M.items.indexOf(it),1); S.energy=Math.min(S.maxE,S.energy+8); floats.push({x:it.x,y:it.y-30,txt:'🍄 +8 ⚡',t:0,c:'#E8A400'}); mineHud(); } }
+  // bombs
+  for(const bm of M.bombs.slice()){ bm.t-=dt; if(bm.t<=0){ M.bombs.splice(M.bombs.indexOf(bm),1); explode(bm); } }
+  for(const b of M.booms) b.t-=dt; M.booms=M.booms.filter(b=>b.t>0);
+  // foes
+  const f=M.floor;
+  for(const b of M.foes.slice()){
+    b.t+=dt; if(b.hit>0) b.hit-=dt;
+    const dx=P.x-b.x, dy=P.y-b.y, d=Math.hypot(dx,dy);
+    if(b.type==='bat'){
+      const spd=110+Math.min(f,30)*3; const a=Math.atan2(dy,dx)+Math.sin(b.t*3+b.ph)*0.9;
+      if(b.air>0){ b.air-=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
+      else if(d<380){ b.x+=Math.cos(a)*spd*dt; b.y+=Math.sin(a)*spd*dt; } else { b.x+=Math.cos(b.t+b.ph)*40*dt; b.y+=Math.sin(b.t*1.3)*30*dt; }
+      b.x=Math.max(TILE*0.9,Math.min(MW-TILE*0.9,b.x)); b.y=Math.max(TILE*1.2,Math.min(MH-TILE*0.6,b.y));
+    } else if(b.type==='golem'){
+      if(b.air>0){ b.air-=dt; const nx=b.x+b.vx*dt, ny=b.y+b.vy*dt; if(mineWalk(nx,b.y,18)) b.x=nx; if(mineWalk(b.x,ny,18)) b.y=ny; }
+      else if(d<300){ const nx=b.x+dx/d*45*dt, ny=b.y+dy/d*45*dt; if(mineWalk(nx,b.y,18)) b.x=nx; if(mineWalk(b.x,ny,18)) b.y=ny; }
+    } else {
+      const big=b.type==='boss', spd=(big?95:70)+Math.min(f,30)*(big?2:3);
+      b.hopT-=dt;
+      if(b.hopT<=0 && b.air<=0){ b.hopT=(big?1.1:0.7)+Math.random()*0.7; const a = d<(big?600:320) ? Math.atan2(dy,dx)+(Math.random()-0.5)*0.6 : Math.random()*6.28; b.vx=Math.cos(a)*spd; b.vy=Math.sin(a)*spd; b.air=big?0.6:0.4; }
+      if(b.air>0){ b.air-=dt; const nx=b.x+b.vx*dt, ny=b.y+b.vy*dt; if(big ? inBounds(nx,b.y) : mineWalk(nx,b.y,12)) b.x=nx; if(big ? inBounds(b.x,ny) : mineWalk(b.x,ny,12)) b.y=ny; }
+      if(big){ b.spawnT-=dt; if(b.spawnT<=0){ b.spawnT=5.5; if(M.foes.length<6){ M.foes.push(mkFoe('slime',b.x-50,b.y,f)); M.foes.push(mkFoe('slime',b.x+50,b.y,f)); } } }
+    }
+    const reach = b.type==='boss'?62 : b.type==='golem'?34 : b.type==='bat'?26 : 30;
+    if(d<reach && M.inv<=0 && b.hit<=0){
       M.hp--; M.inv=1.2; floats.push({x:P.x,y:P.y-90,txt:'-💗',t:0,c:'#D9558C'});
-      const a=Math.atan2(P.y-s2.y,P.x-s2.x); const kx=P.x+Math.cos(a)*36, ky=P.y+Math.sin(a)*36; if(mineWalk(kx,ky)){ P.x=kx; P.y=ky; }
+      const a=Math.atan2(P.y-b.y,P.x-b.x); const kx=P.x+Math.cos(a)*36, ky=P.y+Math.sin(a)*36; if(mineWalk(kx,ky)){ P.x=kx; P.y=ky; }
       mineHud(); if(M.hp<=0){ faint(); return; }
     }
   }
+  // companion
+  if(comp){
+    comp.t+=dt; if(comp.hop>0) comp.hop-=dt; comp.cd-=dt;
+    const tx=P.x-P.dir*38, ty=P.y+8, dx=tx-comp.x, dy=ty-comp.y, d=Math.hypot(dx,dy);
+    if(d>12){ const v=Math.min(d*4, 260)*dt; comp.x+=dx/d*v; comp.y+=dy/d*v; comp.dir=dx>0?1:-1; comp.moving=true; } else comp.moving=false;
+    if(skillOf(comp.a)==='fight' && comp.cd<=0){
+      let tgt=null, td=110; for(const b of M.foes){ const dd=Math.hypot(b.x-comp.x,b.y-comp.y); if(dd<td){ td=dd; tgt=b; } }
+      if(tgt){ comp.cd=1.0; comp.hop=0.4; comp.dir=tgt.x>comp.x?1:-1; floats.push({x:tgt.x,y:tgt.y-40,txt:'💥',t:0}); hurtFoe(tgt, 1+Math.floor(S.hammer/2), comp.x, comp.y); mineHud(); }
+    }
+  }
+  // wild animal
+  let key='', txt='', dis=false;
+  if(M.wild){ M.wild.t+=dt; if(Math.hypot(P.x-M.wild.x,P.y-M.wild.y)<80){ const need=comp?1:2, s2=SP[M.wild.sp]; dis=(S.inv.berry||0)<need; txt = dis ? `${s2.name}迷路了，给它 ${need} 颗 🍓 就会跟你走` : `用 ${need} 颗 🍓 带${s2.name}回家 💕`; key=txt+dis; } }
+  if(key!==mActKey){ mActKey=key; if(!key) mAct.classList.add('hidden'); else { mAct.textContent=txt; mAct.disabled=dis; mAct.classList.remove('hidden'); } }
   for(const r of M.rocks) if(r.wob>0) r.wob-=dt;
-  for(const f of floats) f.t+=dt;
+  for(const fl of floats) fl.t+=dt;
   while(floats.length && floats[0].t>1.2) floats.shift();
 }
+mAct.onclick=()=>{
+  const w=M.wild; if(!w) return; const need=comp?1:2; if((S.inv.berry||0)<need) return;
+  S.inv.berry-=need; const s2=SP[w.sp];
+  const a={uid:uid(), sp:w.sp, name:s2.name, lvl:1, pitch:1, voice:false, mood:90};
+  S.animals.push(a); const p=randPoint(homeOf(a)); const r=rt(a); r.x=r.tx=p.x; r.y=r.ty=p.y;
+  floats.push({x:w.x,y:w.y-60,txt:'💕',t:0,c:'#FF5E9E'}); M.wild=null; mActKey='';
+  toast(`${s2.name}跟你回庄园啦！回去记得给它录叫声`, 3200); track('befriend',1); invHud(); mineHud(); save();
+};
 function nextFloor(){
   const f=M.floor+1;
-  if(f%5===0 && f>(S.mine.best||1)){ S.mine.best=f; toast(`到达第 ${f} 层！以后可以直接从这里出发 ✨`, 3000); }
-  else toast(`第 ${f} 层`);
-  track('mine_floor',1); genFloor(f); save();
+  if(f%5===1 && f>(S.mine.best||1)){ S.mine.best=f; toast(`到达第 ${f} 层！以后可以直接从这里出发 ✨`, 3000); }
+  else if(f%10===0) toast(`第 ${f} 层 · 果冻王出现了！`, 3000);
+  else toast(`${theme(f).n} · 第 ${f} 层`);
+  track('mine_floor',1); genFloor(f);
+  if(comp){ const sk=skillOf(comp.a);
+    if(sk==='heal' && M.hp<S.maxHp){ M.hp++; floats.push({x:P.x,y:P.y-90,txt:'+💗',t:0,c:'#FF5E9E'}); }
+    if(sk==='snack'){ S.energy=Math.min(S.maxE,S.energy+6); floats.push({x:P.x,y:P.y-90,txt:`${comp.a.name}找到吃的 +6 ⚡`,t:0,c:'#E8A400'}); }
+  }
+  mineHud(); save();
 }
-const mineHudEls={h:document.getElementById('mHearts'), e:document.getElementById('mE'), et:document.getElementById('mEtxt'), f:document.getElementById('mFloor'), b:document.getElementById('mBerry'), j:document.getElementById('mJ')};
+const mineHudEls={h:document.getElementById('mHearts'), e:document.getElementById('mE'), et:document.getElementById('mEtxt'), f:document.getElementById('mFloor'), b:document.getElementById('mBerry'), j:document.getElementById('mJ'), bm:document.getElementById('mB')};
 function mineHud(){
   if(scene!=='mine') return;
   mineHudEls.h.textContent='💗'.repeat(Math.max(0,M.hp))+'🤍'.repeat(Math.max(0,S.maxHp-M.hp));
   mineHudEls.e.style.width=(S.energy/S.maxE*100)+'%'; mineHudEls.et.textContent='⚡'+Math.floor(S.energy);
-  mineHudEls.f.textContent=`水晶洞 · 第 ${M.floor} 层`;
-  mineHudEls.b.textContent=S.inv.berry||0; mineHudEls.j.textContent=S.bag.jelly||0;
+  const boss=M.foes.find(b=>b.type==='boss');
+  mineHudEls.f.textContent = boss ? `果冻王 👑 ${Math.max(0,boss.hp)}/${boss.max}` : `${M.pal.n} · 第 ${M.floor} 层`;
+  mineHudEls.b.textContent=S.inv.berry||0; mineHudEls.j.textContent=S.bag.jelly||0; mineHudEls.bm.textContent=S.bag.bomb||0;
   hud();
 }
 function enterMine(f){
   ac(); scene='mine'; document.body.classList.add('in-mine'); M.hp=S.maxHp; M.trip={}; joy=null;
+  const ca=S.companion && getA(S.companion);
+  comp = ca ? {a:ca, x:0, y:0, dir:1, t:0, cd:0, hop:0, moving:false} : null;
   ['caveMenu','card','book'].forEach(id=>document.getElementById(id).classList.add('hidden'));
-  genFloor(f); toast(`水晶洞 · 第 ${f} 层`);
-  if(!S.mineTip){ S.mineTip=true; setTimeout(()=>toast('点 🔨 或者轻点屏幕，就能敲石头和果冻怪', 3500), 2300); }
+  genFloor(f); toast(`${M.pal.n} · 第 ${f} 层`);
+  if(comp && comp.a.voice) setTimeout(()=>playVoice(comp.a,true,0.8), 400);
+  if(!S.mineTip){ S.mineTip=true; setTimeout(()=>toast('点 🔨 或者轻点屏幕，就能敲石头、打怪、开宝箱', 3500), 2300); }
 }
 function exitMine(){
-  scene='farm'; document.body.classList.remove('in-mine'); joy=null; floats.length=0;
+  if(comp){ comp.a.mood=Math.min(100,(comp.a.mood||70)+10); }
+  scene='farm'; document.body.classList.remove('in-mine'); joy=null; floats.length=0; comp=null; M.wild=null; mAct.classList.add('hidden'); mActKey='';
   P.x=CAVE.x; P.y=CAVE.y+20; P.dir=1; M.trip={}; actKey=''; save(); hud(); invHud(); toast(AREAS.garden.name);
 }
 function faint(){
@@ -990,6 +1183,7 @@ function faint(){
 document.getElementById('faintOk').onclick=()=>document.getElementById('faint').classList.add('hidden');
 document.getElementById('mExit').onclick=()=>{ exitMine(); };
 document.getElementById('mHammer').addEventListener('pointerdown', e=>{ e.preventDefault(); hammerReq=true; });
+document.getElementById('mBomb').onclick=dropBomb;
 document.getElementById('mEat').onclick=()=>{
   if((S.inv.berry||0)<1){ toast('没有草莓了，回庄园采一些吧'); return; }
   if(S.energy>=S.maxE){ toast('体力已经满啦'); return; }
@@ -1005,14 +1199,19 @@ function farmIdle(dt,now){
     if(a.voice && now>=r.next){ cry(a,r); r.next=now+(CRY*0.6+Math.random()*CRY*0.8)*1000; } }
 }
 /* cave menu */
-const caveEl=document.getElementById('caveMenu');
+const caveEl=document.getElementById('caveMenu'), compSel=document.getElementById('compSel'), compInfo=document.getElementById('compInfo');
+function compText(){ const a=S.companion&&getA(S.companion); compInfo.textContent = a ? `${a.name}的本领是「${SKILLS[skillOf(a)].n}」：${SKILLS[skillOf(a)].d}。带着它，迷路的小动物也更愿意跟你回家。` : '带一只小动物一起去，它会帮你的忙。'; }
 function openCave(){
-  document.getElementById('caveE').textContent=`体力 ⚡${Math.floor(S.energy)}/${S.maxE}　敲一下石头用 1 点体力，草莓 🍓 可以补体力`;
+  document.getElementById('caveE').textContent=`体力 ⚡${Math.floor(S.energy)}/${S.maxE}　敲一下石头用 1 点体力`;
+  compSel.innerHTML='<option value="">自己去</option>'+S.animals.map(a=>`<option value="${a.uid}">${esc(a.name)}（${SKILLS[skillOf(a)].n}）</option>`).join('');
+  if(S.companion && !getA(S.companion)) S.companion='';
+  compSel.value=S.companion||''; compText();
   const box=document.getElementById('caveFloors'); box.innerHTML='';
-  const list=[1]; for(let f=5; f<=(S.mine.best||1); f+=5) list.push(f);
+  const list=[1]; for(let f=6; f<=(S.mine.best||1); f+=5) list.push(f);
   list.forEach(f=>{ const b=document.createElement('button'); b.className='btn'+(f>1?' lav':''); b.textContent=`从第 ${f} 层出发`; b.onclick=()=>enterMine(f); box.appendChild(b); });
   caveEl.classList.remove('hidden');
 }
+compSel.onchange=()=>{ S.companion=compSel.value; compText(); saveSoon(); };
 document.getElementById('caveClose').onclick=()=>caveEl.classList.add('hidden');
 caveEl.addEventListener('click',e=>{ if(e.target===caveEl) caveEl.classList.add('hidden'); });
 /* workshop */
@@ -1024,18 +1223,23 @@ const UPG=[
 ];
 const costTxt=c=>Object.entries(c).filter(([k,v])=>v>0).map(([k,v])=>`${GEMS[k].i}${(S.bag[k]||0)}/${v}`).join('　');
 const canPay=c=>Object.entries(c).every(([k,v])=>v<=0||(S.bag[k]||0)>=v);
+const pay=c=>{ for(const [k,v] of Object.entries(c)) if(v>0) S.bag[k]-=v; };
 const workEl=document.getElementById('work'), workBody=document.getElementById('workBody');
 function row(ic,html,btns){ const d=document.createElement('div'); d.className='irow'; d.innerHTML=`<span class="ic">${ic}</span><span class="nm">${html}</span>`; btns.forEach(b=>d.appendChild(b)); return d; }
 function mkBtn(t,cls,dis,fn){ const b=document.createElement('button'); b.className='mini'+(cls?' '+cls:''); b.textContent=t; b.disabled=dis; b.onclick=fn; return b; }
+function sec(t){ const h=document.createElement('div'); h.className='sec'; h.textContent=t; workBody.appendChild(h); }
 function renderWork(){
   workBody.innerHTML='';
-  const h1=document.createElement('div'); h1.className='sec'; h1.textContent='升级'; workBody.appendChild(h1);
+  sec('升级');
   UPG.forEach(u=>{ const lv=u.lv(), maxed=lv>=u.max, c=u.cost(lv);
     workBody.appendChild(row(u.i, `${u.n} Lv.${lv}<small>${maxed?'已经满级啦':u.d()+'<br>'+costTxt(c)}</small>`,
-      [mkBtn(maxed?'满级':'升级','lav',maxed||!canPay(c),()=>{ for(const [k,v] of Object.entries(c)) if(v>0) S.bag[k]-=v; u.up(); save(); hud(); renderWork(); toast(`${u.n}升级啦！`); })])); });
-  const h2=document.createElement('div'); h2.className='sec'; h2.textContent='出售'; workBody.appendChild(h2);
+      [mkBtn(maxed?'满级':'升级','lav',maxed||!canPay(c),()=>{ pay(c); u.up(); save(); hud(); renderWork(); toast(`${u.n}升级啦！`); })])); });
+  sec('制作');
+  const bc={stone:6, quartz:1};
+  workBody.appendChild(row('💣', `糖果炸弹 ×${S.bag.bomb||0}<small>在水晶洞里炸开一大片石头，怪也会受伤<br>${costTxt(bc)}</small>`, [mkBtn('做 1 个','',!canPay(bc),()=>{ pay(bc); S.bag.bomb=(S.bag.bomb||0)+1; saveSoon(); renderWork(); })]));
+  sec('出售');
   let any=false;
-  Object.keys(GEMS).forEach(k=>{ const n=S.bag[k]||0; if(!n) return; any=true; const g=GEMS[k];
+  Object.keys(GEMS).forEach(k=>{ const n=S.bag[k]||0; if(!n || k==='bomb') return; any=true; const g=GEMS[k];
     workBody.appendChild(row(g.i, `${g.n} ×${n}<small>每个 ★${g.price}</small>`, [
       mkBtn('卖 1','',false,()=>{ S.bag[k]--; S.coins+=g.price; hud(); saveSoon(); renderWork(); }),
       mkBtn(`全卖 ★${fmt(n*g.price)}`,'',false,()=>{ S.coins+=n*g.price; S.bag[k]=0; hud(); saveSoon(); renderWork(); toast(`卖出 ${g.i}×${n}，获得 ★${fmt(n*g.price)}`); })])); });
@@ -1046,18 +1250,123 @@ document.getElementById('workClose').onclick=()=>workEl.classList.add('hidden');
 workEl.addEventListener('click',e=>{ if(e.target===workEl) workEl.classList.add('hidden'); });
 /* bag */
 const bagEl=document.getElementById('bag'), bagBody=document.getElementById('bagBody');
+function brow(ic,html,btns){ return row(ic,html,btns||[]); }
 function renderBag(){
   bagBody.innerHTML='';
-  bagBody.appendChild(row('⚡', `体力 ${Math.floor(S.energy)}/${S.maxE}<small>在庄园里会慢慢恢复，也可以吃草莓</small>`, [
+  bagBody.appendChild(brow('⚡', `体力 ${Math.floor(S.energy)}/${S.maxE}<small>在庄园里会慢慢恢复，也可以吃草莓</small>`, [
     mkBtn('吃 🍓 +15','',(S.inv.berry||0)<1||S.energy>=S.maxE,()=>{ S.inv.berry--; S.energy=Math.min(S.maxE,S.energy+15); invHud(); saveSoon(); renderBag(); })]));
-  bagBody.appendChild(row('🍓', `草莓 ×${S.inv.berry||0}<small>送给动物，或者吃掉补体力</small>`, []));
-  bagBody.appendChild(row('🌸', `小花 ×${S.inv.flower||0}<small>动物许愿的时候送给它</small>`, []));
-  Object.keys(GEMS).forEach(k=>{ const n=S.bag[k]||0; if(n) bagBody.appendChild(row(GEMS[k].i, `${GEMS[k].n} ×${n}<small>可以去城堡工坊升级或出售</small>`, [])); });
-  bagBody.appendChild(row('🔨', `魔法锤 Lv.${S.hammer}　💗 ${S.maxHp} 颗心　🎀 装饰 +${S.charm*10}%<small>最深到过第 ${S.mine.best||1} 层存档点</small>`, []));
+  bagBody.appendChild(brow('🍓', `草莓 ×${S.inv.berry||0}<small>送给动物、带野生动物回家，或者吃掉补体力</small>`));
+  bagBody.appendChild(brow('🌸', `小花 ×${S.inv.flower||0}<small>动物许愿的时候送给它</small>`));
+  Object.keys(GEMS).forEach(k=>{ const n=S.bag[k]||0; if(n) bagBody.appendChild(brow(GEMS[k].i, `${GEMS[k].n} ×${n}<small>${k==='bomb'?'在水晶洞里点 💣 使用':'可以去城堡工坊升级或出售'}</small>`)); });
+  bagBody.appendChild(brow('🔨', `魔法锤 Lv.${S.hammer}　💗 ${S.maxHp} 颗心　🎀 装饰 +${S.charm*10}%<small>水晶洞存档点：第 ${S.mine.best||1} 层</small>`));
 }
 document.getElementById('bagBtn').onclick=()=>{ renderBag(); bagEl.classList.remove('hidden'); };
 document.getElementById('bagClose').onclick=()=>bagEl.classList.add('hidden');
 bagEl.addEventListener('click',e=>{ if(e.target===bagEl) bagEl.classList.add('hidden'); });
+
+/* ================= love house (breeding) ================= */
+const GROW_MS=15*60e3, BREED_CD=10*60e3;
+const growF=a=> a.born ? Math.min(1,(Date.now()-a.born)/GROW_MS) : 1;
+function blend(c1,c2,t){ const p=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)); const a=p(c1), b=p(c2); return '#'+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,'0')).join(''); }
+const FEAT=['whisk','beak','tuft','fluff','snout','patch','muzzle','cheeks','antler','spots','horn','mane','maneC','tongue','eyePatch','horns','cowSpots','frogEyes','bigEyes','faceMask','lionMane','trunk'];
+function mixSpec(sa,sb){
+  const pick=(x,y)=>Math.random()<0.5?x:y;
+  const m={id:'mix', from: sa.from||sa.id};
+  m.color=blend(sa.color,sb.color,0.3+Math.random()*0.4); m.inner=pick(sa.inner,sb.inner);
+  // ears come from one parent, most special features from the other, so babies visibly look like both
+  const earsFromA=Math.random()<0.5, E=earsFromA?sa:sb, O=earsFromA?sb:sa;
+  m.ears=E.ears; m.acc=pick(sa.acc,sb.acc);
+  FEAT.forEach(k=>{ if(O[k] && Math.random()<0.8) m[k]=O[k]; else if(E[k] && Math.random()<0.45) m[k]=E[k]; });
+  if(m.trunk && m.beak) delete m.beak;
+  if(m.frogEyes) delete m.bigEyes;
+  m.size=Math.round((sa.size+sb.size)/2); m.base=Math.round((sa.base+sb.base)/2*1.3);
+  m.price=Math.round(((sa.price||sa.base*25)+(sb.price||sb.base*25))/2); m.area=sa.area; m.pitch=1;
+  m.short=(sa.short||sa.name[0]); m.name=(sa.short||sa.name[0])+(sb.short||sb.name[0])+'宝宝';
+  m.desc=`${sa.name}和${sb.name}的宝宝`;
+  return m;
+}
+function wavBlob(buf){
+  const d=buf.getChannelData(0), n=d.length, sr=buf.sampleRate, ab=new ArrayBuffer(44+n*2), v=new DataView(ab);
+  const w=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){ const s=Math.max(-1,Math.min(1,d[i])); v.setInt16(44+i*2, s<0?s*0x8000:s*0x7FFF, true); }
+  return new Blob([ab],{type:'audio/wav'});
+}
+async function mixVoices(A,B){
+  const ba=await loadBuffer(A), bb=await loadBuffer(B); if(!ba||!bb) return null;
+  const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext; if(!OAC) return null;
+  const sr=ba.sampleRate, rate=1.18;
+  const la=ba.duration/rate, lb=bb.duration/rate, off=Math.min(la*0.35,0.6);
+  const total=Math.min(3, Math.max(la, off+lb));
+  const oc=new OAC(1, Math.ceil(total*sr), sr);
+  const sa=oc.createBufferSource(); sa.buffer=ba; sa.playbackRate.value=rate*A.pitch; const ga=oc.createGain();
+  ga.gain.setValueAtTime(1,0); ga.gain.linearRampToValueAtTime(0.12, Math.max(0.05,la));
+  const sb=oc.createBufferSource(); sb.buffer=bb; sb.playbackRate.value=rate*B.pitch; const gb=oc.createGain();
+  gb.gain.setValueAtTime(0.0001,0); gb.gain.setValueAtTime(0.1,off); gb.gain.linearRampToValueAtTime(1, off+Math.min(0.4,lb*0.5));
+  sa.connect(ga); ga.connect(oc.destination); sb.connect(gb); gb.connect(oc.destination);
+  sa.start(0); sb.start(off);
+  const out=await oc.startRendering();
+  return wavBlob(out);
+}
+const loveEl=document.getElementById('love'), loveCells=document.getElementById('loveCells'), loveMsg=document.getElementById('loveMsg'), breedBtn=document.getElementById('breedBtn');
+let pairA=null, pairB=null;
+function whyNot(a){
+  if(!a.voice) return '还没录叫声';
+  if(growF(a)<1) return '还是宝宝';
+  if(a.breedCd && a.breedCd>Date.now()) return `休息中 ${Math.ceil((a.breedCd-Date.now())/60000)} 分钟`;
+  if((a.mood||0)<50) return '心情不好';
+  return '';
+}
+const breedCost=()=>{ const A=getA(pairA), B=getA(pairB); return A&&B ? Math.round(80+(spOf(A).base+spOf(B).base)*25) : 0; };
+function renderLove(){
+  loveCells.innerHTML='';
+  S.animals.forEach(a=>{
+    const why=whyNot(a), sel=a.uid===pairA||a.uid===pairB;
+    const b=document.createElement('button'); b.className='cell'; b.setAttribute('aria-pressed',sel); b.style.opacity=why?.45:1;
+    b.innerHTML=animalSVG(spOf(a))+`<span class="n">${esc(a.name)}</span>`; b.setAttribute('aria-label',a.name+(why?'，'+why:''));
+    b.onclick=()=>{ if(why){ loveMsg.textContent=`${a.name}${why}，现在不能生宝宝`; return; }
+      if(sel){ if(pairA===a.uid) pairA=null; else pairB=null; }
+      else if(!pairA) pairA=a.uid; else if(!pairB) pairB=a.uid; else { pairA=pairB; pairB=a.uid; }
+      loveMsg.textContent=''; renderLove(); };
+    loveCells.appendChild(b);
+  });
+  const A=getA(pairA), B=getA(pairB);
+  document.getElementById('slotA').innerHTML = A ? animalSVG(spOf(A)) : '<span>选一只</span>';
+  document.getElementById('slotB').innerHTML = B ? animalSVG(spOf(B)) : '<span>再选一只</span>';
+  const c=breedCost(); breedBtn.textContent = A&&B ? `生宝宝 ★${fmt(c)}` : '先选两只会叫的小动物'; breedBtn.disabled=!(A&&B) || S.coins<c;
+  if(A&&B && S.coins<c) loveMsg.textContent=`还差 ★${fmt(c-S.coins)}`;
+}
+function openLove(){ pairA=pairB=null; loveMsg.textContent=''; renderLove(); loveEl.classList.remove('hidden'); }
+breedBtn.onclick=async()=>{
+  const A=getA(pairA), B=getA(pairB); if(!A||!B) return; const c=breedCost(); if(S.coins<c) return;
+  breedBtn.disabled=true; loveMsg.textContent='💞 宝宝正在学爸爸妈妈说话…';
+  ac();
+  let blob=null; try{ blob=await mixVoices(A,B); }catch(e){}
+  S.coins-=c;
+  const mix=mixSpec(spOf(A),spOf(B));
+  const baby={uid:uid(), sp:A.mix?A.mix.from:A.sp, name:mix.name, lvl:1, pitch:1, voice:false, mood:95, mix, born:Date.now()};
+  if(blob){ await putVoice(baby.uid, blob); baby.voice=true; }
+  A.breedCd=B.breedCd=Date.now()+BREED_CD;
+  S.animals.push(baby); const r=rt(baby); r.x=r.tx=LOVE.x+30; r.y=r.ty=LOVE.y+30; r.wait=3; r.hop=0.5;
+  track('breed',1); save(); hud(); loveEl.classList.add('hidden');
+  toast(`${A.name}和${B.name}生了一只${mix.name}！`, 3500);
+  openCard(baby.uid);
+  if(baby.voice) setTimeout(()=>playVoice(baby,true), 300);
+};
+document.getElementById('loveClose').onclick=()=>loveEl.classList.add('hidden');
+loveEl.addEventListener('click',e=>{ if(e.target===loveEl) loveEl.classList.add('hidden'); });
+function loveHouse(){
+  const x=850, b=272;
+  ctx.fillStyle='rgba(138,46,92,.12)'; ctx.beginPath(); ctx.ellipse(x,b,90,16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FFF4F8'; ctx.strokeStyle='#F2A6C6'; ctx.lineWidth=3; rr(x-60,b-70,120,70,10); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#FF9EC6'; ctx.beginPath(); ctx.moveTo(x-74,b-66); ctx.lineTo(x,b-122); ctx.lineTo(x+74,b-66); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#CDB8FF'; ctx.beginPath(); ctx.arc(x,b-24,16,Math.PI,0); ctx.rect(x-16,b-24,32,24); ctx.fill();
+  const hb=1+Math.sin(T*3)*0.08; ctx.save(); ctx.translate(x,b-92); ctx.scale(hb,hb); ctx.fillStyle='#FF5E8E';
+  ctx.beginPath(); ctx.moveTo(0,10); ctx.bezierCurveTo(-18,-2,-9,-15,0,-5); ctx.bezierCurveTo(9,-15,18,-2,0,10); ctx.fill(); ctx.restore();
+  ctx.font='18px "ZCOOL KuaiLe","PingFang SC",sans-serif'; ctx.textAlign='center'; ctx.lineWidth=5; ctx.strokeStyle='#fff'; ctx.fillStyle='#8A2E5C';
+  ctx.strokeText('爱心小屋',x,b-130); ctx.fillText('爱心小屋',x,b-130);
+}
 
 /* drawing: cave mouth on the farm */
 function caveMouth(){
@@ -1073,29 +1382,35 @@ function caveMouth(){
 }
 function gemShape(x,y,s,c){ ctx.fillStyle=c; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x+s*0.6,y-s*0.2); ctx.lineTo(x,y+s); ctx.lineTo(x-s*0.6,y-s*0.2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
 function drawMine(){
-  const vw=VW/SC, vh=VH/SC;
+  const vw=VW/SC, vh=VH/SC, pal=M.pal;
   camX = vw>=MW ? (MW-vw)/2 : Math.max(0, Math.min(MW-vw, P.x-vw/2));
   camY = vh>=MH ? (MH-vh)/2 : Math.max(0, Math.min(MH-vh, P.y-vh/2));
-  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle='#3B2346'; ctx.fillRect(0,0,VW,VH);
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle=pal.bg; ctx.fillRect(0,0,VW,VH);
   ctx.setTransform(dpr*SC,0,0,dpr*SC,-camX*dpr*SC,-camY*dpr*SC);
-  // walls + floor
-  ctx.fillStyle='#6B4A86'; ctx.fillRect(0,0,MW,MH);
-  ctx.fillStyle='#EBDDF7'; rr(TILE*0.55,TILE*0.85,MW-TILE*1.1,MH-TILE*1.15,26); ctx.fill();
-  ctx.fillStyle='rgba(205,184,255,.25)';
+  ctx.fillStyle=pal.wall; ctx.fillRect(0,0,MW,MH);
+  ctx.fillStyle=pal.floor; rr(TILE*0.55,TILE*0.85,MW-TILE*1.1,MH-TILE*1.15,26); ctx.fill();
+  ctx.fillStyle=pal.check;
   for(let r=1;r<MROWS;r++) for(let c=1;c<MCOLS-1;c++) if((r+c)%2===0) ctx.fillRect(c*TILE,r*TILE,TILE,TILE);
-  ctx.fillStyle='#7E5C9B'; rr(0,0,MW,TILE*0.95,0); ctx.fill();
+  ctx.fillStyle=pal.top; rr(0,0,MW,TILE*0.95,0); ctx.fill();
   for(const d of M.deco){ gemShape(d.x, d.top?TILE*0.7:MH-6, 16*d.s, d.c); }
-  // ladder
   if(M.ladder){ const {x,y}=M.ladder; ctx.fillStyle='#4A2D5E'; ctx.beginPath(); ctx.ellipse(x,y,26,15,0,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='#FFB3D1'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(x-10,y+8); ctx.lineTo(x-10,y-26); ctx.moveTo(x+10,y+8); ctx.lineTo(x+10,y-26); for(let k=0;k<4;k++){ ctx.moveTo(x-10,y-20+k*8); ctx.lineTo(x+10,y-20+k*8); } ctx.stroke();
     ctx.globalAlpha=.5+.5*Math.sin(T*4); ctx.fillStyle='#FFE29A'; star(x+20,y-24,6); ctx.globalAlpha=1; }
+  for(const it of M.items) if(it.k==='shroom') shroom(it);
+  for(const bm of M.bombs) bombDraw(bm);
   const objs=[];
   for(const r of M.rocks) objs.push({y:r.y, d:()=>rock(r)});
-  for(const s2 of M.slimes) objs.push({y:s2.y, d:()=>slime(s2)});
+  for(const it of M.items) if(it.k==='chest') objs.push({y:it.y, d:()=>chest(it)});
+  for(const b of M.foes) objs.push({y:b.y+(b.type==='bat'?30:0), d:()=>foeDraw(b)});
+  if(M.wild) objs.push({y:M.wild.y, d:()=>wildDraw(M.wild)});
+  if(comp) objs.push({y:comp.y, d:()=>compDraw()});
   objs.push({y:P.y, d:()=>{ if(M.inv>0 && Math.floor(M.inv*10)%2===0) return; princess(ctx,P.x,P.y,P.dir,P.moving?P.t:0,S.look); hammerDraw(); }});
   objs.sort((a,b)=>a.y-b.y).forEach(o=>o.d());
+  for(const b of M.booms){ const k=1-b.t/0.45; ctx.globalAlpha=Math.max(0,1-k); ctx.fillStyle='#FFE29A'; ctx.beginPath(); ctx.arc(b.x,b.y-10,40+k*90,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FF9EC6'; ctx.beginPath(); ctx.arc(b.x,b.y-10,20+k*60,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+  if(comp && skillOf(comp.a)==='find'){ const tg=M.ladder||M.ladderRock; if(tg){ const a=Math.atan2(tg.y-P.y,tg.x-P.x), ax=P.x+Math.cos(a)*58, ay=P.y-30+Math.sin(a)*40;
+    ctx.save(); ctx.translate(ax,ay); ctx.rotate(a); ctx.globalAlpha=.7+.3*Math.sin(T*5); ctx.fillStyle='#FF5E8E'; ctx.beginPath(); ctx.moveTo(14,0); ctx.lineTo(-6,-9); ctx.lineTo(-2,0); ctx.lineTo(-6,9); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.globalAlpha=1; } }
   ctx.textAlign='center'; ctx.font='24px "ZCOOL KuaiLe","PingFang SC",sans-serif';
-  for(const f of floats){ ctx.globalAlpha=Math.max(0,1-f.t/1.2); const y=f.y-f.t*40; ctx.lineWidth=5; ctx.strokeStyle='#fff'; ctx.strokeText(f.txt,f.x,y); ctx.fillStyle=f.c||'#E8A400'; ctx.fillText(f.txt,f.x,y); }
+  for(const f of floats){ ctx.globalAlpha=Math.max(0,Math.min(1,1-f.t/1.2)); const y=f.y-Math.max(0,f.t)*40; ctx.lineWidth=5; ctx.strokeStyle='#fff'; ctx.strokeText(f.txt,f.x,y); ctx.fillStyle=f.c||'#E8A400'; ctx.fillText(f.txt,f.x,y); }
   ctx.globalAlpha=1;
   if(joy && joy.moved>=10){
     ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -1105,25 +1420,83 @@ function drawMine(){
   }
 }
 function rock(r){
-  const w = r.wob>0 ? Math.sin(r.wob*60)*3 : 0, x=r.x+w, y=r.y;
+  const pal=M.pal, w = r.wob>0 ? Math.sin(r.wob*60)*3 : 0, x=r.x+w, y=r.y;
   ctx.fillStyle='rgba(74,45,94,.18)'; ctx.beginPath(); ctx.ellipse(x,y+4,30,9,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#D6C6E0'; ctx.strokeStyle='#A890B8'; ctx.lineWidth=3;
+  ctx.fillStyle=pal.rock; ctx.strokeStyle=pal.rockS; ctx.lineWidth=3;
   ctx.beginPath(); ctx.moveTo(x-28,y); ctx.quadraticCurveTo(x-30,y-30,x-6,y-36); ctx.quadraticCurveTo(x+22,y-40,x+28,y-12); ctx.quadraticCurveTo(x+30,y+4,x,y+5); ctx.quadraticCurveTo(x-24,y+6,x-28,y); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(x-10,y-24,8,4,-0.4,0,Math.PI*2); ctx.fill();
   if(r.gem){ const c=GEMS[r.gem].c; gemShape(x+8,y-14,9,c); gemShape(x-12,y-6,6,c); }
-  if(r.hp<r.max){ ctx.strokeStyle='#8E739F'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x-2,y-34); ctx.lineTo(x+4,y-22); ctx.lineTo(x-4,y-14); if(r.hp<r.max-1){ ctx.moveTo(x+18,y-26); ctx.lineTo(x+10,y-16); } ctx.stroke(); }
+  if(r.hp<r.max){ ctx.strokeStyle=pal.rockS; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x-2,y-34); ctx.lineTo(x+4,y-22); ctx.lineTo(x-4,y-14); if(r.hp<r.max-1){ ctx.moveTo(x+18,y-26); ctx.lineTo(x+10,y-16); } ctx.stroke(); }
 }
-function slime(s2){
-  const c=slimeColor(M.floor), bob = s2.air>0 ? Math.sin((0.4-s2.air)/0.4*Math.PI)*16 : 0;
-  const sq = s2.air>0 ? 0.9 : 1+Math.sin(s2.t*6)*0.05;
-  ctx.fillStyle='rgba(74,45,94,.18)'; ctx.beginPath(); ctx.ellipse(s2.x,s2.y,20,6,0,0,Math.PI*2); ctx.fill();
-  ctx.save(); ctx.translate(s2.x, s2.y-bob); ctx.scale(1/sq, sq);
-  ctx.fillStyle = s2.hit>0 ? '#FFFFFF' : c; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2.5;
+function chest(it){
+  const x=it.x, y=it.y, b=Math.sin(it.t*2)*1.5;
+  ctx.fillStyle='rgba(74,45,94,.18)'; ctx.beginPath(); ctx.ellipse(x,y+3,26,7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FF9EC6'; ctx.strokeStyle='#D9558C'; ctx.lineWidth=2.5; rr(x-22,y-26+b,44,28,6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#FFB3D1'; rr(x-24,y-36+b,48,14,7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#FFD66B'; ctx.fillRect(x-3,y-36+b,6,38); ctx.beginPath(); ctx.arc(x,y-20+b,5,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=.5+.5*Math.sin(it.t*4); ctx.fillStyle='#fff'; star(x+22,y-38,5); ctx.globalAlpha=1;
+}
+function shroom(it){
+  const x=it.x, y=it.y+Math.sin(it.t*3)*1.5;
+  ctx.fillStyle='#FFF4E6'; rr(x-5,y-14,10,14,4); ctx.fill();
+  ctx.fillStyle='#FF6F9F'; ctx.beginPath(); ctx.ellipse(x,y-15,15,10,0,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#fff'; [[-6,-19],[4,-21],[8,-16]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(x+dx,y+dy,2.2,0,Math.PI*2); ctx.fill(); });
+}
+function bombDraw(bm){
+  const x=bm.x, y=bm.y, s=1+Math.sin(bm.t*20)*0.06*(1.3-bm.t);
+  ctx.save(); ctx.translate(x,y-14); ctx.scale(s,s);
+  ctx.fillStyle='#FF7EB3'; ctx.beginPath(); ctx.arc(0,0,13,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(0,0,8,-2.2,-0.6); ctx.stroke();
+  ctx.strokeStyle='#8A5A44'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(4,-11); ctx.quadraticCurveTo(10,-20,14,-16); ctx.stroke();
+  ctx.fillStyle=Math.floor(bm.t*10)%2?'#FFD66B':'#FF5E3A'; star(14,-17,5); ctx.restore();
+}
+function foeDraw(b){
+  if(b.type==='bat') return batDraw(b);
+  if(b.type==='golem') return golemDraw(b);
+  const big=b.type==='boss', c=big?'#FF7EB3':(M.floor<5?'#FF9EC6':M.floor<10?'#8FD8FF':M.floor<18?'#C7A6FF':'#FFD66B');
+  const bob = b.air>0 ? Math.sin((Math.min(b.air,big?0.6:0.4))/(big?0.6:0.4)*Math.PI)*(big?26:16) : 0;
+  const sq = b.air>0 ? 0.9 : 1+Math.sin(b.t*6)*0.05, k=big?2.4:1;
+  ctx.fillStyle='rgba(74,45,94,.18)'; ctx.beginPath(); ctx.ellipse(b.x,b.y,20*k,6*k,0,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.translate(b.x, b.y-bob); ctx.scale(k/sq, k*sq);
+  ctx.fillStyle = b.hit>0 ? '#FFFFFF' : c; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2.5/k;
   ctx.beginPath(); ctx.moveTo(-22,0); ctx.quadraticCurveTo(-24,-34,0,-36); ctx.quadraticCurveTo(24,-34,22,0); ctx.quadraticCurveTo(0,4,-22,0); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.ellipse(-9,-25,6,3.5,-0.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#5A2140'; ctx.beginPath(); ctx.ellipse(-7,-15,2.6,3.4,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(7,-15,2.6,3.4,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='rgba(255,94,142,.5)'; ctx.beginPath(); ctx.ellipse(-13,-9,3,2,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(13,-9,3,2,0,0,Math.PI*2); ctx.fill();
+  if(big){ ctx.fillStyle='#FFD66B'; ctx.strokeStyle='#E8B23A'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(-9,-34); ctx.lineTo(-9,-42); ctx.lineTo(-4.5,-38); ctx.lineTo(0,-45); ctx.lineTo(4.5,-38); ctx.lineTo(9,-42); ctx.lineTo(9,-34); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   ctx.restore();
+}
+function batDraw(b){
+  const x=b.x, y=b.y-30+Math.sin(b.t*4)*4, fl=Math.sin(b.t*18)*0.6;
+  ctx.fillStyle='rgba(74,45,94,.12)'; ctx.beginPath(); ctx.ellipse(b.x,b.y,14,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=b.hit>0?'#fff':'#9D7BC9';
+  [-1,1].forEach(s=>{ ctx.save(); ctx.translate(x+s*8,y); ctx.rotate(s*fl); ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(s*14,-14,s*24,-2); ctx.quadraticCurveTo(s*16,0,s*18,6); ctx.quadraticCurveTo(s*10,2,0,6); ctx.closePath(); ctx.fill(); ctx.restore(); });
+  ctx.fillStyle=b.hit>0?'#fff':'#B79CFF'; ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x-8,y-6); ctx.lineTo(x-6,y-15); ctx.lineTo(x-2,y-8); ctx.moveTo(x+8,y-6); ctx.lineTo(x+6,y-15); ctx.lineTo(x+2,y-8); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x-4,y-1,2.4,0,Math.PI*2); ctx.arc(x+4,y-1,2.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#5A2140'; ctx.beginPath(); ctx.arc(x-4,y-1,1.2,0,Math.PI*2); ctx.arc(x+4,y-1,1.2,0,Math.PI*2); ctx.fill();
+}
+function golemDraw(b){
+  const pal=M.pal, x=b.x, y=b.y, wob=Math.sin(b.t*5)*2;
+  ctx.fillStyle='rgba(74,45,94,.2)'; ctx.beginPath(); ctx.ellipse(x,y+3,28,8,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=b.hit>0?'#fff':pal.rockS; ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2.5;
+  rr(x-24,y-46+wob,48,46,16); ctx.fill(); ctx.stroke();
+  gemShape(x,y-50+wob,9,GEMS[gemBest(M.floor)].c);
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x-8,y-28+wob,4,0,Math.PI*2); ctx.arc(x+8,y-28+wob,4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#5A2140'; ctx.beginPath(); ctx.arc(x-8,y-28+wob,2,0,Math.PI*2); ctx.arc(x+8,y-28+wob,2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,94,142,.5)'; ctx.beginPath(); ctx.ellipse(x-14,y-20+wob,3.5,2,0,0,Math.PI*2); ctx.ellipse(x+14,y-20+wob,3.5,2,0,0,Math.PI*2); ctx.fill();
+}
+function wildDraw(w){
+  const s=SP[w.sp], sz=s.size*0.85, im=IMG[w.sp], bob=Math.abs(Math.sin(w.t*2.5))*3;
+  ctx.fillStyle='rgba(74,45,94,.16)'; ctx.beginPath(); ctx.ellipse(w.x,w.y,sz*0.3,sz*0.08,0,0,Math.PI*2); ctx.fill();
+  if(im.complete) ctx.drawImage(im,w.x-sz/2,w.y-sz-bob,sz,sz);
+  bubble(w.x+sz*0.35, w.y-sz+4+Math.sin(T*3)*3, '❓');
+}
+function compDraw(){
+  const a=comp.a, s=spOf(a), sz=s.size*0.72, im=imgOf(a);
+  const hop = comp.hop>0 ? Math.sin((0.4-comp.hop)/0.4*Math.PI)*12 : (comp.moving ? Math.abs(Math.sin(comp.t*10))*3 : 0);
+  ctx.fillStyle='rgba(74,45,94,.16)'; ctx.beginPath(); ctx.ellipse(comp.x,comp.y,sz*0.3,sz*0.08,0,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.translate(comp.x, comp.y-hop); ctx.scale(comp.dir<0?-1:1,1); if(im.complete) ctx.drawImage(im,-sz/2,-sz,sz,sz); ctx.restore();
 }
 function hammerDraw(){
   const sw = M.swing>0 ? (1-M.swing/0.25) : 0;
@@ -1186,7 +1559,7 @@ function lock(x,y){
   ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
 }
 function drawAnimal(a,r){
-  const s=SP[a.sp], sz=s.size, im=IMG[a.sp];
+  const s=spOf(a), sz=s.size*(0.62+0.38*growF(a)), im=imgOf(a);
   const walking = r.wait<=0;
   const hop = r.hop>0 ? Math.sin((0.5-r.hop)/0.5*Math.PI)*14 : (walking ? Math.abs(Math.sin(r.bob*9))*3 : 0);
   ctx.fillStyle='rgba(138,46,92,.14)'; ctx.beginPath(); ctx.ellipse(r.x,r.y,sz*0.3,sz*0.08,0,0,Math.PI*2); ctx.fill();
@@ -1258,16 +1631,17 @@ function renderBook(){
   const sp=SP[bookSel], has=owned(sp.id)>0, cost=adoptCost(sp);
   const big=document.getElementById('bBig'); big.innerHTML=animalSVG(sp.id); big.className='big'+(has?'':' sil');
   document.getElementById('bName').textContent = has?sp.name:'???';
-  document.getElementById('bInc').textContent = `★ +${fmt(sp.base)} / ${CRY}秒`;
+  document.getElementById('bInc').textContent = `★ +${fmt(sp.base)} / ${CRY}秒 · 本领：${SKILLS[SKILL_OF[sp.id]].n}`;
   document.getElementById('bDesc').textContent = sp.desc;
   const req=document.getElementById('bReq'), ad=document.getElementById('bAdopt');
-  if(!S.unlocked[sp.area]){ req.textContent=`住在「${AREAS[sp.area].name}」，先去解锁那里吧`; ad.disabled=true; }
+  if(sp.wild){ req.textContent=`买不到哦，要在水晶洞第 ${sp.wild} 层以下遇到它，带它回家`; ad.disabled=true; }
+  else if(!S.unlocked[sp.area]){ req.textContent=`住在「${AREAS[sp.area].name}」，先去解锁那里吧`; ad.disabled=true; }
   else { req.textContent = S.coins<cost ? `还差 ★${fmt(cost-S.coins)}` : ''; ad.disabled=S.coins<cost; }
-  ad.textContent = `领养 ★${fmt(cost)}`;
+  ad.textContent = sp.wild ? '野生动物' : `领养 ★${fmt(cost)}`;
 }
 document.getElementById('bAdopt').onclick=()=>{
   const sp=SP[bookSel], cost=adoptCost(sp);
-  if(S.coins<cost||!S.unlocked[sp.area]) return;
+  if(sp.wild||S.coins<cost||!S.unlocked[sp.area]) return;
   S.coins-=cost;
   const a={uid:uid(), sp:sp.id, name:sp.name, lvl:1, pitch:1, voice:false, mood:80};
   S.animals.push(a);
@@ -1288,10 +1662,10 @@ const getA=id=>S.animals.find(a=>a.uid===id);
 const pitchLabel=p=> p<0.8?'低沉':p<0.95?'稍低':p<=1.05?'原声':p<1.4?'可爱':'尖尖';
 function openCard(id, fresh){
   const a=getA(id); if(!a) return; cardUid=id; ac();
-  document.getElementById('cHero').innerHTML=animalSVG(a.sp);
+  document.getElementById('cHero').innerHTML=animalSVG(spOf(a));
   cName.value=a.name; cPitch.value=a.pitch; recErr.textContent='';
   refreshCard();
-  if(fresh) recHint.textContent=`欢迎${SP[a.sp].name}！点一下给它录叫声吧`;
+  if(fresh) recHint.textContent=`欢迎${spOf(a).name}！点一下给它录叫声吧`;
   cardEl.classList.remove('hidden');
 }
 function refreshCard(){
@@ -1299,9 +1673,9 @@ function refreshCard(){
   cPitchOut.textContent=pitchLabel(a.pitch); playBtn.disabled=!a.voice;
   if(!rec) recHint.textContent = a.voice ? `每叫一声 +${fmt(income(a))}，点一下重新录` : '点一下开始录叫声（最长 3 秒）';
   const c=upCost(a); upBtn.textContent=`升级 ★${fmt(c)}`; upBtn.disabled=S.coins<c;
-  document.getElementById('cMood').textContent=`心情 ${moodFace(a)} ${Math.round(a.mood)} · 收入 ×${moodMult(a)}`+(a.mood<40?' · 去摸摸它吧':'');
+  document.getElementById('cMood').textContent=`心情 ${moodFace(a)} ${Math.round(a.mood)} · 收入 ×${moodMult(a)}`+(a.mood<40?' · 去摸摸它吧':'')+(growF(a)<1?` · 宝宝还要 ${Math.ceil((1-growF(a))*GROW_MS/60000)} 分钟长大`:'')+` · 本领：${SKILLS[skillOf(a)].n}`;
 }
-cName.addEventListener('input',()=>{ const a=getA(cardUid); if(a){ a.name=cName.value.trim()||SP[a.sp].name; saveSoon(); } });
+cName.addEventListener('input',()=>{ const a=getA(cardUid); if(a){ a.name=cName.value.trim()||spOf(a).name; saveSoon(); } });
 cPitch.addEventListener('input',()=>{ const a=getA(cardUid); if(a){ a.pitch=parseFloat(cPitch.value); cPitchOut.textContent=pitchLabel(a.pitch); saveSoon(); } });
 cPitch.addEventListener('change',()=>{ const a=getA(cardUid); if(a&&a.voice) playVoice(a,true); });
 playBtn.onclick=()=>{ const a=getA(cardUid); if(a) playVoice(a,true); };
@@ -1377,8 +1751,43 @@ muteBtn.onclick=()=>{ S.muted=!S.muted; syncMute(); save(); ac(); };
 document.getElementById('setBtn').onclick=()=>setEl.classList.remove('hidden');
 document.getElementById('setClose').onclick=()=>setEl.classList.add('hidden');
 setEl.addEventListener('click',e=>{ if(e.target===setEl) setEl.classList.add('hidden'); });
+/* save export / import (includes voice recordings) */
+const saveMsg=document.getElementById('saveMsg');
+function blobToB64(b){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]||''); r.onerror=()=>res(''); r.readAsDataURL(b); }); }
+function b64ToBlob(b64,type){ const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:type||'audio/mp4'}); }
+document.getElementById('exportBtn').onclick=async()=>{
+  saveMsg.textContent='正在打包…';
+  if(scene==='farm') S.p={x:Math.round(P.x),y:Math.round(P.y)}; save();
+  const voices={};
+  for(const a of S.animals){ const b=await getVoice(a.uid); if(b) voices[a.uid]={type:b.type, data:await blobToB64(b)}; }
+  let state=null; try{ state=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  const d=new Date(), stamp=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const name=`公主庄园存档-${stamp}.json`;
+  const file=new File([JSON.stringify({app:'princess-zoo', v:1, state, voices})], name, {type:'application/json'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'公主庄园存档'}); saveMsg.textContent='在弹出的菜单里选「存储到“文件”」就保存好啦'; return; }
+  }catch(e){ if(e && e.name==='AbortError'){ saveMsg.textContent='已取消'; return; } }
+  const url=URL.createObjectURL(file), link=document.createElement('a'); link.href=url; link.download=name; document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  saveMsg.textContent=`已导出 ${name}`;
+};
+const importSave=document.getElementById('importSave');
+document.getElementById('importBtn2').onclick=()=>{ importSave.value=''; importSave.click(); };
+importSave.onchange=async()=>{
+  const f=importSave.files&&importSave.files[0]; if(!f) return;
+  let data=null; try{ data=JSON.parse(await f.text()); }catch(e){}
+  if(!data || data.app!=='princess-zoo' || !data.state){ saveMsg.textContent='这个文件不是公主庄园的存档'; return; }
+  const n=(data.state.animals||[]).length, c=fmt(data.state.coins||0);
+  if(!confirm(`要用这个存档覆盖现在的进度吗？\n存档里有 ${n} 只动物、★${c} 星星币。`)) return;
+  saveMsg.textContent='正在导入…';
+  noSave=true;
+  for(const [uid,v] of Object.entries(data.voices||{})){ try{ await putVoice(uid, b64ToBlob(v.data, v.type)); }catch(e){} }
+  try{ localStorage.setItem(KEY, JSON.stringify(data.state)); }catch(e){ saveMsg.textContent='导入失败，请再试一次'; noSave=false; return; }
+  location.reload();
+};
 document.getElementById('resetBtn').onclick=async()=>{
   if(!confirm('确定清空所有存档和录音吗？')) return;
+  noSave=true;
   for(const a of S.animals) await delVoice(a.uid);
   try{ localStorage.removeItem(KEY); localStorage.removeItem('pvz_state_v1'); }catch(e){}
   location.reload();
